@@ -1,5 +1,25 @@
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+[profile.dev.package."*"]
+opt-level = 3
+debug = "none"
+
 [workspace]
 resolver = "2"
-members = [
+members = [ "api",
 	"mqjs"
 ]
+
+[workspace.lints.rust]
+dead_code = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+correctness = { level = "warn", priority = -1 }
+
+[workspace.dependencies]
+rquickjs = {version = "0.6", features = ["futures", "loader", "dyn-load"]}
+tokio = {version = "1.40", default-features = false, features = ["rt", "fs", "macros"]}
+
+api = {path = "api"}

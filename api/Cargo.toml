@@ -1,12 +1,10 @@
 [package]
-name = "mqjs"
+name = "api"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 rquickjs.workspace = true
-tokio.workspace = true
-api.workspace = true
 
 [lints]
 workspace = true
