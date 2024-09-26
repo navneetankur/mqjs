@@ -17,4 +17,3 @@ fn get_args_array<'a>(ctx: Ctx<'a>, args: Args) -> Array<'a> {
     }
     jargs
 }
-

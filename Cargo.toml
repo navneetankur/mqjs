@@ -7,7 +7,7 @@ debug = "none"
 
 [workspace]
 resolver = "2"
-members = [ "api",
+members = [ "api", "modules/fs",
 	"mqjs"
 ]
 

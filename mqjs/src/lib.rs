@@ -1,8 +1,9 @@
 use std::env::Args;
 
-use rquickjs::{loader::{FileResolver, NativeLoader, ScriptLoader}, AsyncContext, AsyncRuntime, Ctx, Function, Value};
+use rquickjs::{loader::{BuiltinLoader, FileResolver, ModuleLoader, NativeLoader, ScriptLoader}, AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Function, Value};
 const MODULE_PATH_JS: &str = "/home/navn/bin/mqjs/modules/js";
 const MODULE_PATH_SO: &str = "/home/navn/bin/mqjs/modules/so";
+const WORKSPACE_TEMP: &str = "/home/navn/workspace/rust/mqjs/target/debug";
 
 
 pub async fn realmain(mut args: Args) -> u8 {
@@ -10,9 +11,13 @@ pub async fn realmain(mut args: Args) -> u8 {
 
     let resolver = FileResolver::default()
         .with_paths(
-            ["./", MODULE_PATH_JS, MODULE_PATH_SO]
+            ["./", MODULE_PATH_JS, MODULE_PATH_SO,
+            #[cfg(debug_assertions)]
+            WORKSPACE_TEMP,
+            ]
         ).with_native();
     let loader = (
+        BuiltinLoader::default(), ModuleLoader::default(),
         NativeLoader::default(), ScriptLoader::default(),
     );
     let rt = AsyncRuntime::new().unwrap();
@@ -22,7 +27,7 @@ pub async fn realmain(mut args: Args) -> u8 {
     let rv = context.with(|mut ctx| {
         api::add_api_obj(&mut ctx, args);
         add_global_fn(&mut ctx);
-        let rv = ctx.eval_file::<Value,_>(script_name).unwrap();
+        let rv = run_js_file(&mut ctx, script_name);
         if rv.is_int() {
             return rv.as_int().unwrap() as u8;
         }
@@ -31,6 +36,15 @@ pub async fn realmain(mut args: Args) -> u8 {
         }
     }).await;
     return rv;
+}
+
+fn run_js_file<'js>(ctx: &mut Ctx<'js>, file: String) -> Value<'js> {
+    match ctx.eval_file::<Value,_>(file).catch(ctx) {
+        Ok(v) => return v,
+        Err(e) => {
+            panic!("{e:?}");
+        }
+    }
 }
 
 fn println(v: Value) {
