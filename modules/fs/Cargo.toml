@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rquickjs.workspace = true
+common.workspace = true
 
 [lints]
 workspace = true

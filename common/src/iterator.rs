@@ -24,7 +24,6 @@ where
     T::Item: IntoJs<'js>
 {
     fn from_js(_: &Ctx<'js>, value: Value<'js>) -> rquickjs::Result<Self> {
-        println!("fjs");
         Ok(Class::<Self>::from_value(&value)?.try_borrow()?.clone())
     }
 }

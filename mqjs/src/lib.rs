@@ -1,6 +1,6 @@
 use std::{env::Args, path::{Path, PathBuf}};
 
-use rquickjs::{loader::{BuiltinLoader, FileResolver, ModuleLoader, NativeLoader, Resolver, ScriptLoader}, AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Function, Module, Value};
+use rquickjs::{async_with, loader::{BuiltinLoader, FileResolver, ModuleLoader, NativeLoader, Resolver, ScriptLoader}, AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Function, Module, Value};
 const MODULE_PATH_JS: &str = "/home/navn/bin/mqjs/modules/js";
 const MODULE_PATH_SO: &str = "/home/navn/bin/mqjs/modules/so";
 const WORKSPACE_TEMP: &str = "/home/navn/workspace/rust/mqjs/target/debug";
@@ -24,16 +24,39 @@ pub async fn realmain(args: Args) {
     rt.set_loader(resolver, loader).await;
     let context = AsyncContext::full(&rt).await.unwrap();
     let script_name = args.peek().expect("No script file provided.").clone();
-    context.with(|mut ctx| {
-        api::add_api_obj(&mut ctx, args);
-        run_js_file(&mut ctx, script_name);
+    // context.with(|mut ctx| {
+    //     fun_name(ctx, args, script_name);
+    // }).await;
+    // context.async_with(|mut ctx| {
+    //     core::pin::Pin::new(Box::new(fun_name(ctx, args, script_name)))
+    // }).await;
+    async_with!(context => |ctx| {
+        process_and_run(ctx, args, script_name).await;
     }).await;
     rt.idle().await;
 }
 
-fn run_js_file<'js>(ctx: &mut Ctx<'js>, file: String) {
+async fn process_and_run(mut ctx: Ctx<'_>, args: std::iter::Peekable<Args>, script_name: String) {
+    api::add_api_obj(&mut ctx, args);
+    run_js_file(&mut ctx, script_name).await;
+}
+
+async fn run_js_file<'js>(ctx: &mut Ctx<'js>, file: String) {
     let source = std::fs::read(&file).unwrap();
-    Module::evaluate(ctx.clone(),file, source).catch(ctx).unwrap();
+    // Module::evaluate(ctx.clone(),file, source).catch(ctx).unwrap();
+    let mod_evaluation = Module::evaluate(ctx.clone(),file, source).unwrap().into_future::<Value>().await;
+    if let Err(e) = mod_evaluation {
+        match e {
+            rquickjs::Error::Exception => {
+                let catch = ctx.catch();
+                let Some(ex) = catch.as_exception() else {return};
+                panic!("{ex:?}");
+            },
+            other => {
+                panic!("{other:?}");
+            }
+        }
+    }
 }
 #[derive(Default)]
 pub struct SimpleResolver {

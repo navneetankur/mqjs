@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 rquickjs.workspace = true
+common.workspace = true
 
 [lints]
 workspace = true

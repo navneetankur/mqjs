@@ -23,7 +23,6 @@ pub fn js_println(v: Value) {
     js_print(v);
     println!();
 }
-
 pub fn add_global_fn(ctx: &mut Ctx) {
     let globals = ctx.globals();
     globals.set("println", Function::new(ctx.clone(), js_println)).unwrap();
