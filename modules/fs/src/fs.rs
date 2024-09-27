@@ -14,5 +14,8 @@ impl ModuleDef for Fs {
 }
 
 fn read_file(path: String) -> String {
-    std::fs::read_to_string(path).unwrap()
+    println!("got here");
+    let rv = std::fs::read_to_string(path).unwrap();
+    println!("done reading");
+    return rv;
 }

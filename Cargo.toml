@@ -10,6 +10,7 @@ resolver = "2"
 members = [ "api", "modules/fs",
 	"mqjs"
 ]
+exclude = ["rquickjs"]
 
 [workspace.lints.rust]
 dead_code = "warn"
@@ -20,6 +21,7 @@ correctness = { level = "warn", priority = -1 }
 
 [workspace.dependencies]
 rquickjs = {version = "0.6", features = ["futures", "loader", "dyn-load"]}
+# rquickjs = {path = "rquickjs", features = ["futures", "loader", "dyn-load"]}
 tokio = {version = "1.40", default-features = false, features = ["rt", "fs", "macros"]}
 
 api = {path = "api"}
