@@ -26,7 +26,6 @@ pub async fn realmain(args: Args) {
     let script_name = args.peek().expect("No script file provided.").clone();
     context.with(|mut ctx| {
         api::add_api_obj(&mut ctx, args);
-        add_global_fn(&mut ctx);
         run_js_file(&mut ctx, script_name);
     }).await;
     rt.idle().await;
@@ -36,37 +35,6 @@ fn run_js_file<'js>(ctx: &mut Ctx<'js>, file: String) {
     let source = std::fs::read(&file).unwrap();
     Module::evaluate(ctx.clone(),file, source).catch(ctx).unwrap();
 }
-// async fn js_runner<'js>(ctx: &mut Ctx<'js>, file: String) {
-//     run_js_file(ctx, file).await
-// }
-
-fn print(v: Value) {
-    use rquickjs::Type;
-    match v.type_of() {
-        Type::String => print!("{}", v.into_string().unwrap().to_string().unwrap()),
-        Type::Int => print!("{}", v.as_int().unwrap()),
-        Type::Float => print!("{}", v.as_float().unwrap()),
-        Type::Array => {
-            print!("[");
-            for value in v.into_array().unwrap().iter::<Value>() {
-                print(value.unwrap());
-                print!(", ");
-            }
-            print!("]");
-        },
-        _ => print!("{:?}", v),
-    }
-}
-fn println(v: Value) {
-    print(v);
-    println!();
-}
-
-fn add_global_fn(ctx: &mut Ctx) {
-    let globals = ctx.globals();
-    globals.set("println", Function::new(ctx.clone(), println)).unwrap();
-}
-
 #[derive(Default)]
 pub struct SimpleResolver {
     paths: Vec<PathBuf>,
