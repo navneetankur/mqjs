@@ -32,7 +32,7 @@ impl<'js, T: Iterator> Trace<'js> for JsIterator<T> {
     fn trace<'a>(&self, _tracer: rquickjs::class::Tracer<'a, 'js>) {}
 }
 
-impl<'js, T: Iterator + Clone + 'js> JsClass<'js> for JsIterator<T>
+impl<'js, T: Iterator + 'js> JsClass<'js> for JsIterator<T>
 where
     T::Item: IntoJs<'js>
 {
