@@ -4,7 +4,7 @@ const PRINTLN: &str = "println";
 const PRINT: &str = "print";
 const ARGS: &str = "args";
 
-pub fn add_api_obj(ctx: &mut Ctx, args: impl IntoIterator<Item = String>) {
+pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let globals = ctx.globals();
     let api = Object::new(ctx.clone()).unwrap();
     let jargs = get_args_array(ctx.clone(), args);

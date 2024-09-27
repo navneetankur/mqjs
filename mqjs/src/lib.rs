@@ -1,50 +1,45 @@
 use std::{env::Args, path::{Path, PathBuf}};
 
-use rquickjs::{async_with, loader::{BuiltinLoader, FileResolver, ModuleLoader, NativeLoader, Resolver, ScriptLoader}, AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Function, Module, Value};
-const MODULE_PATH_JS: &str = "/home/navn/bin/mqjs/modules/js";
-const MODULE_PATH_SO: &str = "/home/navn/bin/mqjs/modules/so";
+use rquickjs::{async_with, loader::{BuiltinLoader, ModuleLoader, NativeLoader, Resolver, ScriptLoader}, AsyncContext, AsyncRuntime, Ctx, Module, Value};
+const MODULE_PATH_JS: &str = "/home/navn/bin/lib/mqjs/modules/js";
+const MODULE_PATH_SO: &str = "/home/navn/bin/lib/mqjs/modules/so";
 const WORKSPACE_TEMP: &str = "/home/navn/workspace/rust/mqjs/target/debug";
 
 
 pub async fn realmain(args: Args) {
     let mut args = args.peekable();
     args.next(); //get rid of this program name.
+    let script_name = args.peek().expect("No script file provided.").clone();
+    let rt = AsyncRuntime::new().unwrap();
+    let source = std::fs::read(&script_name).unwrap();
+    process_and_run(rt, &source, &script_name, args).await;
+}
 
+async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {
     let resolver = 
         SimpleResolver::default().with_paths(
-            [MODULE_PATH_JS, MODULE_PATH_SO, WORKSPACE_TEMP]
+            [MODULE_PATH_JS, MODULE_PATH_SO, 
+            #[cfg(debug_assertions)]
+            WORKSPACE_TEMP
+            ]
         );
     let loader = (
-        BuiltinLoader::default(),
-        ModuleLoader::default(),
+        // BuiltinLoader::default(),
+        // ModuleLoader::default(),
         NativeLoader::default(),
         ScriptLoader::default(),
     );
-    let rt = AsyncRuntime::new().unwrap();
     rt.set_loader(resolver, loader).await;
     let context = AsyncContext::full(&rt).await.unwrap();
-    let script_name = args.peek().expect("No script file provided.").clone();
-    // context.with(|mut ctx| {
-    //     fun_name(ctx, args, script_name);
-    // }).await;
-    // context.async_with(|mut ctx| {
-    //     core::pin::Pin::new(Box::new(fun_name(ctx, args, script_name)))
-    // }).await;
     async_with!(context => |ctx| {
-        process_and_run(ctx, args, script_name).await;
+        api::add_api_obj(&ctx, args);
+        run_js_source(&ctx, source, file_name).await;
     }).await;
     rt.idle().await;
 }
 
-async fn process_and_run(mut ctx: Ctx<'_>, args: std::iter::Peekable<Args>, script_name: String) {
-    api::add_api_obj(&mut ctx, args);
-    run_js_file(&mut ctx, script_name).await;
-}
-
-async fn run_js_file<'js>(ctx: &mut Ctx<'js>, file: String) {
-    let source = std::fs::read(&file).unwrap();
-    // Module::evaluate(ctx.clone(),file, source).catch(ctx).unwrap();
-    let mod_evaluation = Module::evaluate(ctx.clone(),file, source).unwrap().into_future::<Value>().await;
+async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
+    let mod_evaluation = Module::evaluate(ctx.clone(),file_name, source).unwrap().into_future::<Value>().await;
     if let Err(e) = mod_evaluation {
         match e {
             rquickjs::Error::Exception => {
