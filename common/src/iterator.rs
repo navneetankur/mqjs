@@ -11,7 +11,7 @@ impl<T: Iterator> JsIterator<T> {
         Self { v }
     }
 }
-impl<'js, T: Iterator + Clone + 'js> IntoJs<'js> for JsIterator<T>
+impl<'js, T: Iterator + 'js> IntoJs<'js> for JsIterator<T>
 where
     T::Item: IntoJs<'js>
 {
