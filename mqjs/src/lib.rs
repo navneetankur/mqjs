@@ -1,8 +1,9 @@
-use std::{env::Args, path::{Path, PathBuf}};
+use std::{env::Args, fs::File, io::Read, path::{Path, PathBuf}};
 
-use rquickjs::{async_with, loader::{BuiltinLoader, ModuleLoader, NativeLoader, Resolver, ScriptLoader}, AsyncContext, AsyncRuntime, Ctx, Module, Value};
+use rquickjs::{async_with, loader::{NativeLoader, ScriptLoader}, AsyncContext, AsyncRuntime, Ctx, Module, Value};
 const MODULE_PATH_JS: &str = "/home/navn/bin/lib/mqjs/modules/js";
 const MODULE_PATH_SO: &str = "/home/navn/bin/lib/mqjs/modules/so";
+#[cfg(debug_assertions)]
 const WORKSPACE_TEMP: &str = "/home/navn/workspace/rust/mqjs/target/debug";
 
 
@@ -11,8 +12,20 @@ pub async fn realmain(args: Args) {
     args.next(); //get rid of this program name.
     let script_name = args.peek().expect("No script file provided.").clone();
     let rt = AsyncRuntime::new().unwrap();
-    let source = std::fs::read(&script_name).unwrap();
+    let source = get_source(&script_name);
     process_and_run(rt, &source, &script_name, args).await;
+}
+
+fn get_source(file_name: &str) -> Vec<u8> {
+    // let use_strict = b"\"use strict;\"\n";
+    let use_strict = b"";
+    let mut file = File::open(file_name).unwrap();
+    let size = file.metadata().map(|m| m.len() as usize).ok();
+    let mut bytes = Vec::new();
+    bytes.reserve_exact(use_strict.len() + size.unwrap_or(0));
+    bytes.extend_from_slice(use_strict);
+    file.read_to_end(&mut bytes).unwrap();
+    return bytes;
 }
 
 async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {
@@ -39,20 +52,29 @@ async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args:
 }
 
 async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
-    let mod_evaluation = Module::evaluate(ctx.clone(),file_name, source).unwrap().into_future::<Value>().await;
-    if let Err(e) = mod_evaluation {
-        match e {
-            rquickjs::Error::Exception => {
-                let catch = ctx.catch();
-                let Some(ex) = catch.as_exception() else {return};
-                panic!("{ex:?}");
-            },
-            other => {
-                panic!("{other:?}");
-            }
+    let mod_evaluation = Module::evaluate(ctx.clone(),file_name, source);
+    match mod_evaluation {
+        Ok(ok) => {
+            let Err(e) = ok.into_future::<Value>().await else {return};
+            check_err(e, ctx);
+        },
+        Err(e) => check_err(e, ctx),
+    };
+        // .unwrap().into_future::<Value>().await;
+}
+fn check_err(e: rquickjs::Error, ctx: &Ctx) {
+    match e {
+        rquickjs::Error::Exception => {
+            let catch = ctx.catch();
+            let Some(ex) = catch.as_exception() else {return};
+            panic!("{ex:?}");
+        },
+        other => {
+            panic!("{other:?}");
         }
     }
 }
+
 #[derive(Default)]
 pub struct SimpleResolver {
     paths: Vec<PathBuf>,
@@ -70,7 +92,7 @@ impl SimpleResolver {
         return self;
     }
 }
-impl Resolver for SimpleResolver {
+impl rquickjs::loader::Resolver for SimpleResolver {
     fn resolve<'js>(&mut self, _: &Ctx<'js>, base: &str, name: &str) -> rquickjs::Result<String> {
         let find1 = PathBuf::from(name);
         if find1.is_file() { return Ok(find1.to_str().unwrap().to_string()) }
