@@ -31,9 +31,10 @@ fn get_source(file_name: &str) -> Vec<u8> {
 async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {
     let resolver = 
         SimpleResolver::default().with_paths(
-            [MODULE_PATH_JS, MODULE_PATH_SO, 
+            [
             #[cfg(debug_assertions)]
-            WORKSPACE_TEMP
+            WORKSPACE_TEMP,
+            MODULE_PATH_JS, MODULE_PATH_SO, 
             ]
         );
     let loader = (
