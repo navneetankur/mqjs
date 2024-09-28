@@ -24,14 +24,18 @@ pub fn value_to_string<'js>(ctx: &Ctx<'js>, js_value: Value<'js>) -> String {
             let v_obj_ref = js_value.as_object().unwrap();
             let object_iter = v_obj_ref.props::<Value, Value>();
             if object_iter.len() == 0 {
-                return get_toString(ctx, js_value.into_object().unwrap());
+                return value_to_string(ctx, 
+                    get_toString(js_value.into_object().unwrap())
+                );
             }
             let mut sval = Vec::with_capacity(10);
             sval.push("{".to_string());
             for value in object_iter {
                 let (k, value) = value.unwrap();
                 if is_toString(&k) {
-                    return get_toString(ctx, js_value.into_object().unwrap());
+                    return value_to_string(ctx, 
+                        get_toString(js_value.into_object().unwrap())
+                    );
                 }
                 let t = value_to_string(ctx, k);
                 sval.push(t);
@@ -56,13 +60,10 @@ fn is_toString(k: &Value<'_>) -> bool {
     return false;
 }
 #[allow(non_snake_case)]
-fn get_toString<'js>(ctx: &Ctx<'js>, obj: Object<'js>) -> String {
+fn get_toString(obj: Object<'_>) -> Value<'_> {
     let toString: rquickjs::Function = obj.get(PredefinedAtom::ToString).unwrap();
     let str_val = toString.call::<_, Value>((rquickjs::function::This(obj),));
-    if let Err(str_val) = &str_val {
-        assert!(!str_val.is_exception(), "{:?}", ctx.catch());
-    }
-    return str_val.unwrap().into_string().unwrap().to_string().unwrap();
+    return str_val.unwrap();
 }
 #[allow(clippy::needless_pass_by_value)]
 pub fn js_print<'js>(ctx: Ctx<'js>, v: Value<'js>) {
