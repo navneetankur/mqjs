@@ -21,6 +21,8 @@ correctness = { level = "warn", priority = -1 }
 uninlined_format_args = "allow"
 missing_panics_doc = "allow"
 needless_return = "allow"
+redundant_else = "allow"
+module_name_repetitions = "allow"
 
 [workspace.dependencies]
 rquickjs = {version = "0.6", features = ["futures", "loader", "dyn-load", "macro"]}
