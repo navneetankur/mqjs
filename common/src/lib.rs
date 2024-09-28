@@ -2,6 +2,7 @@
 pub mod iterator;
 
 use rquickjs::{atom::PredefinedAtom, Ctx, Function, Object, Value};
+#[allow(clippy::only_used_in_recursion)]
 #[must_use]
 pub fn value_to_string<'js>(ctx: &Ctx<'js>, js_value: Value<'js>) -> String {
     use rquickjs::Type;
