@@ -17,7 +17,7 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     globals.set(PRINT, print).unwrap();
     globals.set("api", api).unwrap();
 }
-fn get_args_array<'a>(ctx: Ctx<'a>,  args: impl IntoIterator<Item = String>) -> Array<'a> {
+fn get_args_array(ctx: Ctx<'_>,  args: impl IntoIterator<Item = String>) -> Array<'_> {
     let jargs = Array::new(ctx).unwrap();
     for (i, arg) in args.into_iter().enumerate() {
         jargs.set(i, arg).unwrap();
