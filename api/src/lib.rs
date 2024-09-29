@@ -1,4 +1,5 @@
 mod command;
+mod file;
 use command::JsCommand;
 use common::bufread::JsBufReader;
 use rquickjs::{Array, Class, Ctx, Function, Object};

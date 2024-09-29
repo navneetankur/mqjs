@@ -4,7 +4,7 @@ use common::iterator::NextReturn;
 use rquickjs::{atom::PredefinedAtom, class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, Class, Ctx, Function, IntoJs, Object, Value};
 
 pub struct JsChildStderr{
-    v: Option<BufReader<ChildStderr>>,
+    pub v: Option<BufReader<ChildStderr>>,
 }
 impl From<ChildStderr> for JsChildStderr {
     fn from(value: ChildStderr) -> Self {
@@ -49,7 +49,7 @@ impl<'js> JsClass<'js> for JsChildStderr {
     }
 }
 
-static NONE_MESSAGE: &str = "this stderr is already given up.";
+pub static NONE_MESSAGE: &str = "this stderr is already given up.";
 type This<'js> = rquickjs::prelude::This<OwnedBorrowMut<'js, JsChildStderr>>;
 pub fn read(mut this: This) -> io::Result<String> {
     let Some(csout) = &mut this.v else { panic!("{}",NONE_MESSAGE) };

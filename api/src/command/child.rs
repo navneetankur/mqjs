@@ -1,10 +1,10 @@
-mod childstout;
-mod childstderr;
+pub mod childstout;
+pub mod childstderr;
 use std::{io::Write, process::{Child, ChildStdin}};
+use childstderr::JsChildStderr;
+use childstout::JsChildStdout;
 use rquickjs::class::Trace;
 
-pub use childstout::JsChildStdout;
-pub use childstderr::JsChildStderr;
 #[rquickjs::class]
 pub struct JsChild {
     v: Child,
@@ -47,7 +47,7 @@ impl<'js> Trace<'js> for JsChild {
 }
 #[rquickjs::class]
 pub struct JsChildStdin{
-    v: Option<ChildStdin>,
+    pub v: Option<ChildStdin>,
 }
 impl From<ChildStdin> for JsChildStdin {
     fn from(value: ChildStdin) -> Self {

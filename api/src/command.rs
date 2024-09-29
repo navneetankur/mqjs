@@ -1,7 +1,7 @@
 pub mod output;
 pub mod child;
 use std::{fs::File, process::{Command, Stdio}};
-use child::JsChild;
+use child::{childstderr::JsChildStderr, childstout::JsChildStdout, JsChild, JsChildStdin};
 use output::Output;
 use rquickjs::{class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, prelude::This, Class, Function, IntoJs, Object};
 pub struct JsCommand {
@@ -44,14 +44,18 @@ impl<'js> JsClass<'js> for JsCommand {
             stdin_filepath,
             stdin_piped,
             stdin_inherit,
+            stdin_child_stdout,
+            stdin_child_stderr,
             stdout_null,
             stdout_filepath,
             stdout_piped,
             stdout_inherit,
+            stdout_child_stdin,
             stderr_null,
             stderr_filepath,
             stderr_piped,
-            stderr_inherit
+            stderr_inherit,
+            stderr_child_stdin
         );
         #[cfg(unix)]
         proto_fn!(proto, exec);
@@ -119,6 +123,18 @@ fn stdin_inherit(mut this: This<OwnedBorrowMut<JsCommand>>) -> Class<JsCommand>{
     this.v.stdin(Stdio::inherit());
 	return this.0.into_inner();
 }
+fn stdin_child_stdout<'js>(mut this: This<OwnedBorrowMut<'js, JsCommand>>, mut stdout: OwnedBorrowMut<'js, JsChildStdout>) -> Class<'js, JsCommand>{
+    let Some(csout) = stdout.v.take() else { panic!("{}",child::childstout::NONE_MESSAGE) };
+    let csout = csout.into_inner();
+    this.v.stdin(csout);
+	return this.0.into_inner();
+}
+fn stdin_child_stderr<'js>(mut this: This<OwnedBorrowMut<'js, JsCommand>>, mut stderr: OwnedBorrowMut<'js, JsChildStderr>) -> Class<'js, JsCommand>{
+    let Some(csout) = stderr.v.take() else { panic!("{}",child::childstderr::NONE_MESSAGE) };
+    let cserr = csout.into_inner();
+    this.v.stdin(cserr);
+	return this.0.into_inner();
+}
 fn stdout_null(mut this: This<OwnedBorrowMut<JsCommand>>) -> Class<JsCommand>{
     this.v.stdout(Stdio::null());
 	return this.0.into_inner();
@@ -136,6 +152,11 @@ fn stdout_inherit(mut this: This<OwnedBorrowMut<JsCommand>>) -> Class<JsCommand>
     this.v.stdout(Stdio::inherit());
 	return this.0.into_inner();
 }
+fn stdout_child_stdin<'js>(mut this: This<OwnedBorrowMut<'js, JsCommand>>, mut stdin: OwnedBorrowMut<'js, JsChildStdin>) -> Class<'js, JsCommand>{
+    let Some(csin) = stdin.v.take() else { panic!("{}","This stdin is already given up.") };
+    this.v.stdout(csin);
+	return this.0.into_inner();
+}
 fn stderr_null(mut this: This<OwnedBorrowMut<JsCommand>>) -> Class<JsCommand>{
     this.v.stderr(Stdio::null());
 	return this.0.into_inner();
@@ -151,6 +172,11 @@ fn stderr_piped(mut this: This<OwnedBorrowMut<JsCommand>>) -> Class<JsCommand>{
 }
 fn stderr_inherit(mut this: This<OwnedBorrowMut<JsCommand>>) -> Class<JsCommand>{
     this.v.stderr(Stdio::inherit());
+	return this.0.into_inner();
+}
+fn stderr_child_stdin<'js>(mut this: This<OwnedBorrowMut<'js, JsCommand>>, mut stdin: OwnedBorrowMut<'js, JsChildStdin>) -> Class<'js, JsCommand>{
+    let Some(csin) = stdin.v.take() else { panic!("{}","This stdin is already given up.") };
+    this.v.stderr(csin);
 	return this.0.into_inner();
 }
 fn spawn(mut this: This<OwnedBorrowMut<JsCommand>>) -> std::io::Result<JsChild> {
