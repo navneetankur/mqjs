@@ -1,4 +1,3 @@
-mod fs;
 
 #[allow(non_snake_case)]
 #[rquickjs::module]

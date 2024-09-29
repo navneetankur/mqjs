@@ -1,5 +1,5 @@
 mod stdin;
-mod command;
+use common::bufread::JsBufReader;
 use rquickjs::{Array, Ctx, Function, Object};
 
 const PRINTLN: &str = "println";
@@ -16,7 +16,8 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let print = Function::new(ctx.clone(), common::js_print).unwrap().with_name(PRINT).unwrap();
     api.set(PRINT, print.clone()).unwrap();
     api.set(PRINTLN, println.clone()).unwrap();
-    api.set(STDIN, stdin::JsStdin::new(std::io::stdin().lock())).unwrap();
+    let v = std::io::stdin().lock();
+    api.set(STDIN, JsBufReader::new(stdin::JsStdin(v))).unwrap();
     globals.set(PRINTLN, println).unwrap();
     globals.set(PRINT, print).unwrap();
     globals.set("api", api).unwrap();
