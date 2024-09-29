@@ -1,5 +1,7 @@
+mod command;
+use command::JsCommand;
 use common::bufread::JsBufReader;
-use rquickjs::{Array, Ctx, Function, Object};
+use rquickjs::{Array, Class, Ctx, Function, Object};
 
 const PRINTLN: &str = "println";
 const PRINT: &str = "print";
@@ -20,6 +22,7 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     globals.set(PRINTLN, println).unwrap();
     globals.set(PRINT, print).unwrap();
     globals.set("api", api).unwrap();
+    Class::<JsCommand>::define(&globals).unwrap();
 }
 fn get_args_array(ctx: Ctx<'_>,  args: impl IntoIterator<Item = String>) -> Array<'_> {
     let jargs = Array::new(ctx).unwrap();

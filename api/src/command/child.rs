@@ -2,8 +2,6 @@ use std::process::{Child, ChildStderr, ChildStdin, ChildStdout};
 
 use rquickjs::class::Trace;
 
-use super::output::Output;
-
 #[rquickjs::class]
 pub struct JsChild {
     v: Child,
@@ -25,8 +23,11 @@ impl JsChild {
     pub fn try_wait(&mut self) -> Option<i32> {
         self.v.try_wait().unwrap()?.code()
     }
-    pub fn wait_with_output(self) -> Output {
-        Output::from(self.v.wait_with_output().unwrap())
+}
+
+impl From<Child> for JsChild {
+    fn from(value: Child) -> Self {
+        Self { v: value }
     }
 }
 
