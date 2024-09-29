@@ -20,8 +20,6 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     api.set(ARGS, jargs).unwrap();
     let println = Function::new(ctx.clone(), common::js_println).unwrap().with_name(PRINTLN).unwrap();
     let print = Function::new(ctx.clone(), common::js_print).unwrap().with_name(PRINT).unwrap();
-    api.set(PRINT, print.clone()).unwrap();
-    api.set(PRINTLN, println.clone()).unwrap();
     api.set(OPENR, file::fileread::js_openr).unwrap();
     api.set(OPENW, file::filewrite::js_openw).unwrap();
     api.set(OUT, out::Out::default()).unwrap();
