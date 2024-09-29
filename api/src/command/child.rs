@@ -1,7 +1,10 @@
-use std::{io::{self, BufRead, BufReader, Read, Write}, process::{Child, ChildStderr, ChildStdin, ChildStdout}};
+mod childstout;
+mod childstderr;
+use std::{io::Write, process::{Child, ChildStdin}};
+use rquickjs::class::Trace;
 
-use rquickjs::{class::{OwnedBorrowMut, Trace}, Class};
-
+pub use childstout::JsChildStdout;
+pub use childstderr::JsChildStderr;
 #[rquickjs::class]
 pub struct JsChild {
     v: Child,
@@ -61,47 +64,4 @@ impl JsChildStdin {
         let Some(csin) = &mut self.v else { panic!("This stdin is already given up.") };
         return csin.write_all(text.as_bytes())
     }
-}
-
-
-#[rquickjs::class]
-pub struct JsChildStdout{
-    v: Option<BufReader<ChildStdout>>,
-}
-impl From<ChildStdout> for JsChildStdout {
-    fn from(value: ChildStdout) -> Self {
-        Self { v: Some(BufReader::new(value)) }
-    }
-}
-impl<'js> Trace<'js> for JsChildStdout {
-    fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
-}
-const NONE_MESSAGE: &str = "this stdout is already given up.";
-#[rquickjs::methods]
-impl JsChildStdout {
-    pub fn read(&mut self) -> io::Result<String> {
-        let Some(csout) = &mut self.v else { panic!("{}",NONE_MESSAGE) };
-        let mut buffer = String::with_capacity(80);
-        csout.read_to_string(&mut buffer)?;
-        return Ok(buffer);
-    }
-
-    pub fn readline(&mut self) -> io::Result<String> {
-        let Some(csout) = &mut self.v else { panic!("{}",NONE_MESSAGE) };
-        let mut buffer = String::with_capacity(80);
-        csout.read_line(&mut buffer)?;
-        return Ok(buffer);
-    }
-}
-#[rquickjs::class]
-pub struct JsChildStderr{
-    v: ChildStderr,
-}
-impl From<ChildStderr> for JsChildStderr {
-    fn from(value: ChildStderr) -> Self {
-        Self { v: value }
-    }
-}
-impl<'js> Trace<'js> for JsChildStderr {
-    fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
 }

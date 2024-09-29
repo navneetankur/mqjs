@@ -4,7 +4,6 @@ use rquickjs::{atom::PredefinedAtom, class::{ClassId, JsClass, OwnedBorrowMut, T
 
 use crate::iterator::NextReturn;
 const READ: &str = "read";
-const READLINE: &str = "readline";
 
 pub struct JsBufReader<B: BufRead> {
     v: B,
@@ -57,15 +56,6 @@ impl<'js, B: BufRead + 'static> JsClass<'js> for JsBufReader<B> {
         };
         let read = Function::new(ctx.clone(), read).unwrap().with_name(READ).unwrap();
         proto.set(READ, read).unwrap();
-
-
-        let readline = |mut this: This<OwnedBorrowMut<'js, Self>>| {
-            let mut buffer = String::with_capacity(80);
-            this.v.read_line(&mut buffer).unwrap();
-            return buffer;
-        };
-        let readline = Function::new(ctx.clone(), readline).unwrap().with_name(READLINE).unwrap();
-        proto.set(READLINE, readline).unwrap();
         return Ok(Some(proto));
     }
 
