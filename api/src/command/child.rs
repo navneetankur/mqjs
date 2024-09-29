@@ -1,6 +1,6 @@
-use std::process::{Child, ChildStderr, ChildStdin, ChildStdout};
+use std::{io::{self, BufRead, BufReader, Read, Write}, process::{Child, ChildStderr, ChildStdin, ChildStdout}};
 
-use rquickjs::class::Trace;
+use rquickjs::{class::{OwnedBorrowMut, Trace}, Class};
 
 #[rquickjs::class]
 pub struct JsChild {
@@ -44,27 +44,54 @@ impl<'js> Trace<'js> for JsChild {
 }
 #[rquickjs::class]
 pub struct JsChildStdin{
-    v: ChildStdin,
+    v: Option<ChildStdin>,
 }
 impl From<ChildStdin> for JsChildStdin {
     fn from(value: ChildStdin) -> Self {
-        Self { v: value }
+        Self { v: Some(value) }
     }
 }
 impl<'js> Trace<'js> for JsChildStdin {
     fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
 }
+#[rquickjs::methods]
+impl JsChildStdin {
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn write(&mut self, text: String) -> std::result::Result<(), std::io::Error> {
+        let Some(csin) = &mut self.v else { panic!("This stdin is already given up.") };
+        return csin.write_all(text.as_bytes())
+    }
+}
+
+
 #[rquickjs::class]
 pub struct JsChildStdout{
-    v: ChildStdout,
+    v: Option<BufReader<ChildStdout>>,
 }
 impl From<ChildStdout> for JsChildStdout {
     fn from(value: ChildStdout) -> Self {
-        Self { v: value }
+        Self { v: Some(BufReader::new(value)) }
     }
 }
 impl<'js> Trace<'js> for JsChildStdout {
     fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
+}
+const NONE_MESSAGE: &str = "this stdout is already given up.";
+#[rquickjs::methods]
+impl JsChildStdout {
+    pub fn read(&mut self) -> io::Result<String> {
+        let Some(csout) = &mut self.v else { panic!("{}",NONE_MESSAGE) };
+        let mut buffer = String::with_capacity(80);
+        csout.read_to_string(&mut buffer)?;
+        return Ok(buffer);
+    }
+
+    pub fn readline(&mut self) -> io::Result<String> {
+        let Some(csout) = &mut self.v else { panic!("{}",NONE_MESSAGE) };
+        let mut buffer = String::with_capacity(80);
+        csout.read_line(&mut buffer)?;
+        return Ok(buffer);
+    }
 }
 #[rquickjs::class]
 pub struct JsChildStderr{
