@@ -1,4 +1,3 @@
-mod stdin;
 use common::bufread::JsBufReader;
 use rquickjs::{Array, Ctx, Function, Object};
 
@@ -17,7 +16,7 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     api.set(PRINT, print.clone()).unwrap();
     api.set(PRINTLN, println.clone()).unwrap();
     let v = std::io::stdin().lock();
-    api.set(STDIN, JsBufReader::new(stdin::JsStdin(v))).unwrap();
+    api.set(STDIN, JsBufReader::new(v)).unwrap();
     globals.set(PRINTLN, println).unwrap();
     globals.set(PRINT, print).unwrap();
     globals.set("api", api).unwrap();
