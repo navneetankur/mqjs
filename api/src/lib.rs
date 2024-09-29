@@ -1,5 +1,6 @@
 mod command;
 mod file;
+mod out;
 use command::JsCommand;
 use common::bufread::JsBufReader;
 use rquickjs::{Array, Class, Ctx, Function, Object};
@@ -10,6 +11,7 @@ const ARGS: &str = "args";
 const STDIN: &str = "stdin";
 const OPENR: &str = "openr";
 const OPENW: &str = "openw";
+const OUT: &str = "out";
 
 pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let globals = ctx.globals();
@@ -22,6 +24,7 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     api.set(PRINTLN, println.clone()).unwrap();
     api.set(OPENR, file::fileread::js_openr).unwrap();
     api.set(OPENW, file::filewrite::js_openw).unwrap();
+    api.set(OUT, out::Out::default()).unwrap();
     let v = std::io::stdin().lock();
     api.set(STDIN, JsBufReader::new(v)).unwrap();
     globals.set(PRINTLN, println).unwrap();
