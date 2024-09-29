@@ -34,9 +34,11 @@ impl<'js> Trace<'js> for JsCommand {
     fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
 }
 macro_rules! impl_fn {
-    ($proto:ident, $func:ident) => {
-        let temp = Function::new($proto.ctx().clone(), $func).unwrap();
-        $proto.set(stringify!($func), temp).unwrap();
+    ($proto:ident, $($funcs:ident),+) => {
+        $(
+        let temp = Function::new($proto.ctx().clone(), $funcs).unwrap();
+        $proto.set(stringify!($funcs), temp).unwrap();
+        )+
     };
 }
 
@@ -53,54 +55,30 @@ impl<'js> JsClass<'js> for JsCommand {
 
     fn prototype(ctx: &rquickjs::Ctx<'js>) -> rquickjs::Result<Option<Object<'js>>> {
         let proto = Object::new(ctx.clone())?;
-        impl_fn!(proto, args);
-        impl_fn!(proto, arg);
-        impl_fn!(proto, spawn);
-        impl_fn!(proto, current_dir);
-        impl_fn!(proto, env);
-        impl_fn!(proto, envs);
-        impl_fn!(proto, output);
-        impl_fn!(proto, status);
-        impl_fn!(proto, stdin_null);
-
-        let stdin_filepath = Function::new(ctx.clone(), stdin_filepath).unwrap();
-        proto.set(STDIN_FILEPATH, stdin_filepath).unwrap();
-
-        let stdin_piped = Function::new(ctx.clone(), stdin_piped).unwrap();
-        proto.set(STDIN_PIPED, stdin_piped).unwrap();
-
-        let stdin_inherit = Function::new(ctx.clone(), stdin_inherit).unwrap();
-        proto.set(STDIN_INHERIT, stdin_inherit).unwrap();
-
-        let stdout_null = Function::new(ctx.clone(), stdout_null).unwrap();
-        proto.set(STDOUT_NULL, stdout_null).unwrap();
-
-        let stdout_filepath = Function::new(ctx.clone(), stdout_filepath).unwrap();
-        proto.set(STDOUT_FILEPATH, stdout_filepath).unwrap();
-
-        let stdout_piped = Function::new(ctx.clone(), stdout_piped).unwrap();
-        proto.set(STDOUT_PIPED, stdout_piped).unwrap();
-
-        let stdout_inherit = Function::new(ctx.clone(), stdout_inherit).unwrap();
-        proto.set(STDOUT_INHERIT, stdout_inherit).unwrap();
-
-        let stderr_null = Function::new(ctx.clone(), stderr_null).unwrap();
-        proto.set(STDERR_NULL, stderr_null).unwrap();
-
-        let stderr_filepath = Function::new(ctx.clone(), stderr_filepath).unwrap();
-        proto.set(STDERR_FILEPATH, stderr_filepath).unwrap();
-
-        let stderr_piped = Function::new(ctx.clone(), stderr_piped).unwrap();
-        proto.set(STDERR_PIPED, stderr_piped).unwrap();
-
-        let stderr_inherit = Function::new(ctx.clone(), stderr_inherit).unwrap();
-        proto.set(STDERR_INHERIT, stderr_inherit).unwrap();
-
+        impl_fn!(proto, 
+            args,
+            arg,
+            spawn,
+            current_dir,
+            env,
+            envs,
+            output,
+            status,
+            stdin_null,
+            stdin_filepath,
+            stdin_piped,
+            stdin_inherit,
+            stdout_null,
+            stdout_filepath,
+            stdout_piped,
+            stdout_inherit,
+            stderr_null,
+            stderr_filepath,
+            stderr_piped,
+            stderr_inherit
+        );
         #[cfg(unix)]
-        {
-            let exec = Function::new(ctx.clone(), exec).unwrap();
-            proto.set(EXEC, exec).unwrap();
-        }
+        impl_fn!(proto, exec);
 
         return Ok(Some(proto));
 
