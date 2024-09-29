@@ -33,6 +33,14 @@ pub struct JsCommand {
 impl<'js> Trace<'js> for JsCommand {
     fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
 }
+macro_rules! impl_fn {
+    ($proto:ident, $func:ident) => {
+        let temp = Function::new($proto.ctx().clone(), $func).unwrap();
+        $proto.set(stringify!($func), temp).unwrap();
+    };
+}
+
+
 impl<'js> JsClass<'js> for JsCommand {
     const NAME: &'static str = "Command";
 
@@ -45,32 +53,15 @@ impl<'js> JsClass<'js> for JsCommand {
 
     fn prototype(ctx: &rquickjs::Ctx<'js>) -> rquickjs::Result<Option<Object<'js>>> {
         let proto = Object::new(ctx.clone())?;
-        let args = Function::new(ctx.clone(), args).unwrap();
-        proto.set(ARGS, args).unwrap();
-
-        let arg = Function::new(ctx.clone(), arg).unwrap();
-        proto.set(ARG, arg).unwrap();
-
-        let spawn = Function::new(ctx.clone(), spawn).unwrap();
-        proto.set(SPAWN, spawn).unwrap();
-
-        let current_dir = Function::new(ctx.clone(), current_dir).unwrap();
-        proto.set(CURRENT_DIR, current_dir).unwrap();
-
-        let env = Function::new(ctx.clone(), env).unwrap();
-        proto.set(ENV, env).unwrap();
-
-        let envs = Function::new(ctx.clone(), envs).unwrap();
-        proto.set(ENVS, envs).unwrap();
-
-        let output = Function::new(ctx.clone(), output).unwrap();
-        proto.set(OUTPUT, output).unwrap();
-
-        let status = Function::new(ctx.clone(), status).unwrap();
-        proto.set(STATUS, status).unwrap();
-
-        let stdin_null = Function::new(ctx.clone(), stdin_null).unwrap();
-        proto.set(STDIN_NULL, stdin_null).unwrap();
+        impl_fn!(proto, args);
+        impl_fn!(proto, arg);
+        impl_fn!(proto, spawn);
+        impl_fn!(proto, current_dir);
+        impl_fn!(proto, env);
+        impl_fn!(proto, envs);
+        impl_fn!(proto, output);
+        impl_fn!(proto, status);
+        impl_fn!(proto, stdin_null);
 
         let stdin_filepath = Function::new(ctx.clone(), stdin_filepath).unwrap();
         proto.set(STDIN_FILEPATH, stdin_filepath).unwrap();

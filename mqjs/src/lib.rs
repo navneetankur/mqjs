@@ -6,7 +6,6 @@ const MODULE_PATH_SO: &str = "/home/navn/bin/lib/mqjs/modules/so";
 #[cfg(debug_assertions)]
 const WORKSPACE_TEMP: &str = "/home/navn/workspace/rust/mqjs/target/debug";
 
-
 pub async fn realmain(args: Args) {
     let mut args = args.peekable();
     args.next(); //get rid of this program name.
