@@ -1,4 +1,5 @@
 mod stdin;
+mod command;
 use rquickjs::{Array, Ctx, Function, Object};
 
 const PRINTLN: &str = "println";
