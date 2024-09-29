@@ -8,6 +8,8 @@ const PRINTLN: &str = "println";
 const PRINT: &str = "print";
 const ARGS: &str = "args";
 const STDIN: &str = "stdin";
+const OPENR: &str = "openr";
+const OPENW: &str = "openw";
 
 pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let globals = ctx.globals();
@@ -18,6 +20,8 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let print = Function::new(ctx.clone(), common::js_print).unwrap().with_name(PRINT).unwrap();
     api.set(PRINT, print.clone()).unwrap();
     api.set(PRINTLN, println.clone()).unwrap();
+    api.set(OPENR, file::fileread::js_openr).unwrap();
+    api.set(OPENW, file::filewrite::js_openw).unwrap();
     let v = std::io::stdin().lock();
     api.set(STDIN, JsBufReader::new(v)).unwrap();
     globals.set(PRINTLN, println).unwrap();

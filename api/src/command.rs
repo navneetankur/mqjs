@@ -4,6 +4,8 @@ use std::{fs::File, process::{Command, Stdio}};
 use child::{childstderr::JsChildStderr, childstout::JsChildStdout, JsChild, JsChildStdin};
 use output::Output;
 use rquickjs::{class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, prelude::This, Class, Function, IntoJs, Object};
+
+use crate::file::{fileread::FileRead, filewrite::FileWrite};
 pub struct JsCommand {
     v: Command
 }
@@ -42,17 +44,20 @@ impl<'js> JsClass<'js> for JsCommand {
             status,
             stdin_null,
             stdin_filepath,
+            stdin_file,
             stdin_piped,
             stdin_inherit,
             stdin_child_stdout,
             stdin_child_stderr,
             stdout_null,
             stdout_filepath,
+            stdout_file,
             stdout_piped,
             stdout_inherit,
             stdout_child_stdin,
             stderr_null,
             stderr_filepath,
+            stderr_file,
             stderr_piped,
             stderr_inherit,
             stderr_child_stdin
@@ -135,12 +140,23 @@ fn stdin_child_stderr<'js>(mut this: This<OwnedBorrowMut<'js, JsCommand>>, mut s
     this.v.stdin(cserr);
 	return this.0.into_inner();
 }
+fn stdin_file<'js>(mut this: This<OwnedBorrowMut<'js, JsCommand>>, mut file: OwnedBorrowMut<'js, FileRead>) -> Class<'js, JsCommand>{
+    let Some(file) = file.v.take() else { panic!("{}",super::file::fileread::NONE_MESSAGE) };
+    let file = file.into_inner();
+    this.v.stdin(file);
+	return this.0.into_inner();
+}
 fn stdout_null(mut this: This<OwnedBorrowMut<JsCommand>>) -> Class<JsCommand>{
     this.v.stdout(Stdio::null());
 	return this.0.into_inner();
 }
 fn stdout_filepath(mut this: This<OwnedBorrowMut<JsCommand>>, path: String) -> Class<JsCommand>{
     let file = File::open(path).unwrap();
+    this.v.stdout(file);
+	return this.0.into_inner();
+}
+fn stdout_file<'js>(mut this: This<OwnedBorrowMut<'js, JsCommand>>, mut file: OwnedBorrowMut<'js, FileWrite>) -> Class<'js, JsCommand>{
+    let Some(file) = file.v.take() else { panic!("{}",super::file::filewrite::NONE_MESSAGE) };
     this.v.stdout(file);
 	return this.0.into_inner();
 }
@@ -177,6 +193,11 @@ fn stderr_inherit(mut this: This<OwnedBorrowMut<JsCommand>>) -> Class<JsCommand>
 fn stderr_child_stdin<'js>(mut this: This<OwnedBorrowMut<'js, JsCommand>>, mut stdin: OwnedBorrowMut<'js, JsChildStdin>) -> Class<'js, JsCommand>{
     let Some(csin) = stdin.v.take() else { panic!("{}","This stdin is already given up.") };
     this.v.stderr(csin);
+	return this.0.into_inner();
+}
+fn stderr_file<'js>(mut this: This<OwnedBorrowMut<'js, JsCommand>>, mut file: OwnedBorrowMut<'js, FileWrite>) -> Class<'js, JsCommand>{
+    let Some(file) = file.v.take() else { panic!("{}",super::file::filewrite::NONE_MESSAGE) };
+    this.v.stderr(file);
 	return this.0.into_inner();
 }
 fn spawn(mut this: This<OwnedBorrowMut<JsCommand>>) -> std::io::Result<JsChild> {
