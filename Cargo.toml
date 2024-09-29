@@ -7,7 +7,7 @@ debug = "none"
 
 [workspace]
 resolver = "2"
-members = [ "api", "common", "modules/fs",
+members = [ "api", "common",
 	"mqjs"
 ]
 exclude = ["rquickjs"]
