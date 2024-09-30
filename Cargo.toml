@@ -24,6 +24,7 @@ missing_errors_doc = "allow"
 needless_return = "allow"
 redundant_else = "allow"
 module_name_repetitions = "allow"
+similar_names = "allow"
 
 [workspace.dependencies]
 rquickjs = {version = "0.6", features = ["futures", "loader", "dyn-load", "macro"]}

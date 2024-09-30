@@ -1,9 +1,19 @@
-use common::rustdata::RustData;
-use rquickjs::{async_with, function::Args, prelude::{Async, Rest}, AsyncContext, Class, Ctx, Function, Module, Value};
+use rquickjs::{async_with, function::Args, prelude::{Async, Rest}, AsyncContext, Ctx, Function, Module, Value};
 static CANNOT_SERIALIZE: &str = "cannot serialize a value, being passed to another thread.";
 
 #[allow(clippy::needless_pass_by_value)]
 pub async fn start<'js>(fun: Function<'js>, params: Rest<Value<'js>>) {
+    let (fun_name, params_json) = setup_task(fun, params);
+
+    std::thread::spawn(||{
+        futures_lite::future::block_on(
+        in_thread(params_json, fun_name)
+        );
+    }).join().unwrap();
+    // in_thread(params_json, fun_name, rust_data).await;
+}
+
+fn setup_task<'js>(fun: Function<'js>, params: Rest<Value<'js>>) -> (String, Vec<String>) {
     let ctx1 = fun.ctx().clone();
     let fun_name: String = fun.get("name").unwrap();
     let fun_name = fun_name.trim();
@@ -18,18 +28,10 @@ pub async fn start<'js>(fun: Function<'js>, params: Rest<Value<'js>>) {
         };
         value.to_string().unwrap()
     }).collect();
-    let rust_data: Class<RustData> = ctx1.globals().get(common::rustdata::RUST_DATA).unwrap();
-    let rust_data = rust_data.borrow().clone();
-
-    std::thread::spawn(||{
-        futures_lite::future::block_on(
-        in_thread(params_json, fun_name, rust_data)
-        );
-    });
-    // in_thread(params_json, fun_name, rust_data).await;
+    (fun_name, params_json)
 }
 
-async fn in_thread(params_json: Vec<String>, fun_name: String, rust_data: RustData) {
+async fn in_thread(params_json: Vec<String>, fun_name: String) {
     let rt2 = super::create_runtime().await;
     let context2 = AsyncContext::full(&rt2).await.unwrap();
     async_with!(context2 => |ctx2| {
@@ -39,16 +41,18 @@ async fn in_thread(params_json: Vec<String>, fun_name: String, rust_data: RustDa
             let arg = ctx2.json_parse(param_json).unwrap();
             args.push_arg(arg).unwrap();
         }
-        run_with_func(&fun_name, args, rust_data, &ctx2).await;
+        run_with_func(&fun_name, args, &ctx2).await;
     }).await;
     rt2.idle().await;
 }
 
-async fn run_with_func<'js>(fun_name: &str, args: Args<'js>, rust_data: RustData, ctx2: &Ctx<'js>) {
+async fn run_with_func<'js>(fun_name: &str, args: Args<'js>, ctx2: &Ctx<'js>) {
     use super::get_ok_check_err;
-    let globals = ctx2.globals();
-    let module = unsafe { Module::load(ctx2.clone(), &rust_data.module_byte).unwrap() };
-    globals.set(common::rustdata::RUST_DATA, rust_data).unwrap();
+    let module = {
+        let rust_data = super::RUST_DATA.read().unwrap();
+        let rust_data = rust_data.as_ref().unwrap();
+        unsafe { Module::load(ctx2.clone(), &rust_data.module_byte).unwrap() }
+    };
     let evaluated_module = super::evaluate_module(ctx2, module).await;
     let fun: Function = evaluated_module.get(fun_name).unwrap();
     get_ok_check_err(ctx2,

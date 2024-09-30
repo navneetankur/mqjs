@@ -1,5 +1,8 @@
 mod thread;
-use std::{env::Args, fs::File, io::Read, path::{Path, PathBuf}};
+static RUST_DATA :RwLock<Option<RustData>> = RwLock::new(None);
+
+use std::{env::Args, fs::File, io::Read, path::{Path, PathBuf}, sync::RwLock};
+use common::rustdata::RustData;
 use rquickjs::{async_with, loader::{NativeLoader, ScriptLoader}, AsyncContext, AsyncRuntime, Ctx, Function, Module, Value};
 const MODULE_PATH_JS: &str = "/home/navn/bin/lib/mqjs/modules/js";
 const MODULE_PATH_SO: &str = "/home/navn/bin/lib/mqjs/modules/so";
@@ -56,7 +59,6 @@ async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args:
     rt.idle().await;
 }
 async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
-    use common::rustdata::{RUST_DATA, RustData};
     let module_decl = Module::declare(ctx.clone(), file_name, source);
     let module_decl = get_ok_check_err(ctx, module_decl);
     let module_bytes = get_ok_check_err(ctx, 
@@ -64,10 +66,10 @@ async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
     );
     let globals = ctx.globals();
     globals.set("thread", thread::thread_fn(ctx)).unwrap();
-    globals.prop(
-        RUST_DATA, 
-        RustData::new(module_bytes)
-    ).unwrap();
+    {
+        let mut rust_data = RUST_DATA.write().unwrap();
+        *rust_data = Some(RustData::new(module_bytes));
+    }
     let module_evaluated = evaluate_module(ctx, module_decl).await;
     let Ok(main) = module_evaluated.get::<_,Function>("main") else { return ; };
     get_ok_check_err(ctx, 
