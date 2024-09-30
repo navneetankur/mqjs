@@ -1,6 +1,6 @@
 use std::{env::Args, fs::File, io::Read, path::{Path, PathBuf}};
 
-use rquickjs::{async_with, loader::{NativeLoader, ScriptLoader}, AsyncContext, AsyncRuntime, Ctx, Module, Value};
+use rquickjs::{async_with, loader::{NativeLoader, ScriptLoader}, AsyncContext, AsyncRuntime, Ctx, Function, Module, Value};
 const MODULE_PATH_JS: &str = "/home/navn/bin/lib/mqjs/modules/js";
 const MODULE_PATH_SO: &str = "/home/navn/bin/lib/mqjs/modules/so";
 #[cfg(debug_assertions)]
@@ -67,11 +67,15 @@ async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
         RUST_DATA, 
         RustData::new(module_bytes)
     ).unwrap();
-    let (_, module_evaluation) = get_ok_check_err(ctx, 
+    let (module_evaluated, module_evaluation) = get_ok_check_err(ctx, 
         module_decl.eval()
     );
     let evaluation_result = module_evaluation.into_future::<Value>().await;
     get_ok_check_err(ctx, evaluation_result);
+    let Ok(main) = module_evaluated.get::<_,Function>("main") else { return ; };
+    get_ok_check_err(ctx, 
+        main.call::<_, Value>(())
+    );
 }
 fn get_ok_check_err<V>(ctx: &Ctx, result: rquickjs::Result<V>) -> V {
     match result {
