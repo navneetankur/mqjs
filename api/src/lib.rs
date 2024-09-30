@@ -11,7 +11,7 @@ const ARGS: &str = "args";
 const STDIN: &str = "stdin";
 const OPENR: &str = "openr";
 const OPENW: &str = "openw";
-const OUT: &str = "out";
+const STDOUT: &str = "stdout";
 
 pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let globals = ctx.globals();
@@ -22,9 +22,11 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let print = Function::new(ctx.clone(), common::js_print).unwrap().with_name(PRINT).unwrap();
     api.set(OPENR, file::fileread::js_openr).unwrap();
     api.set(OPENW, file::filewrite::js_openw).unwrap();
-    api.set(OUT, out::Out::default()).unwrap();
-    let v = std::io::stdin().lock();
-    api.set(STDIN, JsBufReader::new(v)).unwrap();
+    let stdout = ||out::Out::default();
+    api.set(STDOUT, Function::new(ctx.clone(), stdout)).unwrap();
+    let stdin = 
+        ||JsBufReader::new(std::io::stdin().lock());
+    api.set(STDIN, Function::new(ctx.clone(), stdin)).unwrap();
     globals.set(PRINTLN, println).unwrap();
     globals.set(PRINT, print).unwrap();
     globals.set("api", api).unwrap();
