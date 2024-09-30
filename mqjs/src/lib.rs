@@ -58,22 +58,21 @@ async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args:
 
 async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
     let module_decl = Module::declare(ctx.clone(), file_name, source);
-    // let mod_evaluation = Module::evaluate(ctx.clone(),file_name, source);
-    match module_decl {
-        Ok(module) => {
-            let module_evaluation = module.eval();
-            match module_evaluation {
-                Ok((_,ok)) => {
-                    let Err(e) = ok.into_future::<Value>().await else {return};
-                    check_err(e, ctx);
-                },
-                Err(e) => check_err(e, ctx),
-            }
-        },
-        Err(e) => check_err(e, ctx),
-    };
-        // .unwrap().into_future::<Value>().await;
+    let module_decl = get_ok_check_err(ctx, module_decl);
+    let (_, module_evaluation) = get_ok_check_err(ctx, 
+        module_decl.eval()
+    );
+    let evaluation_result = module_evaluation.into_future::<Value>().await;
+    get_ok_check_err(ctx, evaluation_result);
 }
+fn get_ok_check_err<V>(ctx: &Ctx, result: rquickjs::Result<V>) -> V {
+    match result {
+        Ok(v) => v,
+        Err(e) => {check_err(e, ctx); unreachable!()},
+    }
+
+}
+
 fn check_err(e: rquickjs::Error, ctx: &Ctx) {
     match e {
         rquickjs::Error::Exception => {
