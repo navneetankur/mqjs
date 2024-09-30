@@ -7,6 +7,7 @@ edition = "2021"
 rquickjs.workspace = true
 tokio.workspace = true
 api.workspace = true
+common.workspace = true
 
 [lints]
 workspace = true

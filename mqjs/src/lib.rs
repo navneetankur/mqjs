@@ -57,8 +57,16 @@ async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args:
 }
 
 async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
+    use common::rustdata::{RUST_DATA, RustData};
     let module_decl = Module::declare(ctx.clone(), file_name, source);
     let module_decl = get_ok_check_err(ctx, module_decl);
+    let module_bytes = get_ok_check_err(ctx, 
+        module_decl.write(false)
+    );
+    ctx.globals().prop(
+        RUST_DATA, 
+        RustData::new(module_bytes)
+    ).unwrap();
     let (_, module_evaluation) = get_ok_check_err(ctx, 
         module_decl.eval()
     );

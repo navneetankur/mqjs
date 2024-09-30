@@ -213,6 +213,7 @@ name = "mqjs"
 version = "0.1.0"
 dependencies = [
  "api",
+ "common",
  "rquickjs",
  "tokio",
 ]
