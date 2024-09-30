@@ -1,5 +1,16 @@
-use rquickjs::{async_with, function::Args, prelude::{Async, Rest}, AsyncContext, Ctx, Function, Module, Value};
+use rquickjs::{async_with, function::Args, prelude::{Async, Rest}, AsyncContext, Ctx, Function, Module, Object, Value};
 static CANNOT_SERIALIZE: &str = "cannot serialize a value, being passed to another thread.";
+
+pub fn add_thread_objects(global: &mut Object) {
+    let ctx = global.ctx();
+    let api = global.get("api").unwrap_or(
+        Object::new(ctx.clone()).unwrap()
+    );
+    let thread = Object::new(ctx.clone()).unwrap();
+    thread.set("start", Function::new(ctx.clone(), Async(start))).unwrap();
+
+    api.set("thread", thread).unwrap();
+}
 
 #[allow(clippy::needless_pass_by_value)]
 pub async fn start<'js>(fun: Function<'js>, params: Rest<Value<'js>>) {

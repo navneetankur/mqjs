@@ -15,7 +15,9 @@ const STDOUT: &str = "stdout";
 
 pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let globals = ctx.globals();
-    let api = Object::new(ctx.clone()).unwrap();
+    let api = globals.get("api").unwrap_or(
+        Object::new(ctx.clone()).unwrap()
+    );
     let jargs = get_args_array(ctx.clone(), args);
     api.set(ARGS, jargs).unwrap();
     let println = Function::new(ctx.clone(), common::js_println).unwrap().with_name(PRINTLN).unwrap();

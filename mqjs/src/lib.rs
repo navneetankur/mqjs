@@ -64,8 +64,8 @@ async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
     let module_bytes = get_ok_check_err(ctx, 
         module_decl.write(false)
     );
-    let globals = ctx.globals();
-    globals.set("thread", thread::thread_fn(ctx)).unwrap();
+    let mut globals = ctx.globals();
+    thread::add_thread_objects(&mut globals);
     {
         let mut rust_data = RUST_DATA.write().unwrap();
         *rust_data = Some(RustData::new(module_bytes));
