@@ -1,27 +1,29 @@
+mod channel;
+pub use channel::JsChannel;
 use std::thread::JoinHandle;
 
-use rquickjs::{class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, Class, Ctx, IntoJs, Value};
+use rquickjs::{class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, Class, Ctx, Function, IntoJs, Object, Value};
 
-pub struct JsJoinHandle<T: Send + 'static> {
-    pub v: Option<JoinHandle<T>>,
+pub struct JsJoinHandle {
+    pub v: Option<JoinHandle<String>>,
     pub channel: JsChannel,
 }
 
-impl<T: Send + 'static> JsJoinHandle<T> {
+impl JsJoinHandle {
     #[must_use]
-    pub fn new(v: Option<JoinHandle<T>>, receiver: Option<async_channel::Receiver<String>>, sender: Option<async_channel::Sender<String>>) -> Self {
+    pub fn new(v: Option<JoinHandle<String>>, receiver: Option<async_channel::Receiver<String>>, sender: Option<async_channel::Sender<String>>) -> Self {
         Self { v, channel: JsChannel::new(receiver, sender) }
     }
 }
-impl<'js, T: Send + 'static> Trace<'js> for JsJoinHandle<T> {
+impl<'js> Trace<'js> for JsJoinHandle {
     fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
 }
-impl<'js, T: Send + 'static> IntoJs<'js> for JsJoinHandle<T> {
+impl<'js> IntoJs<'js> for JsJoinHandle {
     fn into_js(self, ctx: &rquickjs::Ctx<'js>) -> rquickjs::Result<rquickjs::Value<'js>> {
         Class::instance(ctx.clone(), self).into_js(ctx)
     }
 }
-impl<'js, T: Send + 'static> JsClass<'js> for JsJoinHandle<T> {
+impl<'js> JsClass<'js> for JsJoinHandle {
     const NAME: &'static str = "ThreadJoinHandle";
 
     type Mutable = Writable;
@@ -31,53 +33,42 @@ impl<'js, T: Send + 'static> JsClass<'js> for JsJoinHandle<T> {
         &ID
     }
 
-    fn prototype(_ctx: &rquickjs::Ctx<'js>) -> rquickjs::Result<Option<rquickjs::Object<'js>>> {
-        todo!()
+    fn prototype(ctx: &rquickjs::Ctx<'js>) -> rquickjs::Result<Option<rquickjs::Object<'js>>> {
+        let proto = Object::new(ctx.clone()).unwrap();
+
+        let func = Function::new(ctx.clone(), join).unwrap();
+        proto.set("join", func).unwrap();
+
+        let func = Function::new(ctx.clone(), is_finished).unwrap();
+        proto.set("is_finished", func).unwrap();
+
+        let func = Function::new(ctx.clone(), unpark).unwrap();
+        proto.set("unpark", func).unwrap();
+
+        return Ok(Some(proto));
     }
 
     fn constructor(_: &rquickjs::Ctx<'js>) -> rquickjs::Result<Option<rquickjs::function::Constructor<'js>>> {
         Ok(None)
     }
 }
-type This<'js, T> = rquickjs::function::This<OwnedBorrowMut<'js, JsJoinHandle<T>>>;
+type This<'js> = rquickjs::function::This<OwnedBorrowMut<'js, JsJoinHandle>>;
 static NONE_MESSAGE: &str = "This handle is already given up.";
-fn join<'js, T: Send + IntoJs<'js> + 'static>(mut this: This<'js, T>) -> T {
+#[allow(clippy::needless_pass_by_value)]
+fn join<'js>(ctx: Ctx<'js>, mut this: This<'js>) -> Value<'js> {
     let Some(handle) = this.v.take() else { panic!("{}", NONE_MESSAGE) };
-    return handle.join().unwrap();
+    let rusty =  handle.join().unwrap();
+    let value = ctx.json_parse(rusty).unwrap();
+    return value;
 }
-fn is_finished<'js, T: Send + 'static>(this: This<'js, T>) -> bool {
+#[allow(clippy::needless_pass_by_value)]
+fn is_finished(this: This<'_>) -> bool {
     let Some(handle) = &this.v else { panic!("{}", NONE_MESSAGE) };
     handle.is_finished()
 }
-fn unpark<'js, T: Send + 'static>(mut this: This<'js, T>) {
+#[allow(clippy::needless_pass_by_value)]
+fn unpark(this: This<'_>) {
     let Some(handle) = &this.v else { panic!("{}", NONE_MESSAGE) };
     handle.thread().unpark();
 }
 
-#[rquickjs::class]
-pub struct JsChannel {
-    pub receiver: Option<async_channel::Receiver<String>>,
-    pub sender: Option<async_channel::Sender<String>>,
-}
-impl<'js> Trace<'js> for JsChannel {
-    fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
-}
-impl JsChannel {
-    pub fn new(receiver: Option<async_channel::Receiver<String>>, sender: Option<async_channel::Sender<String>>) -> Self {
-        Self { receiver, sender }
-    }
-}
-static NONE_CHANNEL: &str = "Channel has not been setup.";
-static NO_SERIAL: &str = "Message cannot be serialized. So it can't be sent between threads.";
-static NO_DESERIAL: &str = "Message cannot be serialized. So it can't be sent between threads.";
-
-#[rquickjs::methods]
-impl JsChannel {
-    pub async fn send<'js>(&self, ctx: Ctx<'js>, value: Value<'js> ) {
-        let Some(sender) = &self.sender else { panic!("{}", NONE_CHANNEL) };
-        let Ok(message) = ctx.json_stringify(value) else {panic!("{}", NO_SERIAL)};
-        let Some(message) = message else {panic!("{}", NO_SERIAL)};
-        sender.send(message.to_string().unwrap()).await.unwrap();
-    }
-    //receiver has to be iterator.
-}
