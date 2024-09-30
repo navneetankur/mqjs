@@ -4,9 +4,8 @@ pub mod bufread;
 pub mod rustdata;
 
 use rquickjs::{atom::PredefinedAtom, Ctx, Function, IntoJs, Object, Value};
-#[allow(clippy::only_used_in_recursion)]
 #[must_use]
-pub fn value_to_string<'js>(ctx: &Ctx<'js>, js_value: Value<'js>) -> String {
+pub fn value_to_string(js_value: Value<'_>) -> String {
     use rquickjs::Type;
     match js_value.type_of() {
         Type::String => js_value.into_string().unwrap().to_string().unwrap(),
@@ -16,7 +15,7 @@ pub fn value_to_string<'js>(ctx: &Ctx<'js>, js_value: Value<'js>) -> String {
             let mut sval = Vec::with_capacity(10);
             sval.push(String::from("["));
             for value in js_value.into_array().unwrap().iter::<Value>() {
-                let t = value_to_string(ctx, value.unwrap());
+                let t = value_to_string(value.unwrap());
                 sval.push(t);
                 sval.push(String::from(", "));
             }
@@ -27,7 +26,7 @@ pub fn value_to_string<'js>(ctx: &Ctx<'js>, js_value: Value<'js>) -> String {
             let v_obj_ref = js_value.as_object().unwrap();
             let object_iter = v_obj_ref.props::<Value, Value>();
             if object_iter.len() == 0 {
-                return value_to_string(ctx, 
+                return value_to_string(
                     get_toString(js_value.into_object().unwrap())
                 );
             }
@@ -36,14 +35,14 @@ pub fn value_to_string<'js>(ctx: &Ctx<'js>, js_value: Value<'js>) -> String {
             for value in object_iter {
                 let (k, value) = value.unwrap();
                 if is_toString(&k) {
-                    return value_to_string(ctx, 
+                    return value_to_string(
                         get_toString(js_value.into_object().unwrap())
                     );
                 }
-                let t = value_to_string(ctx, k);
+                let t = value_to_string(k);
                 sval.push(t);
                 sval.push(": ".to_string());
-                sval.push(value_to_string(ctx, value));
+                sval.push(value_to_string(value));
                 sval.push(", ".to_string());
             }
             sval.push("}".to_string());
@@ -74,11 +73,11 @@ fn get_toString(obj: Object<'_>) -> Value<'_> {
     }
 }
 #[allow(clippy::needless_pass_by_value)]
-pub fn js_print<'js>(ctx: Ctx<'js>, v: Value<'js>) {
-    print!("{}", value_to_string(&ctx, v));
+pub fn js_print(v: Value<'_>) {
+    print!("{}", value_to_string(v));
 }
-pub fn js_println<'js>(ctx: Ctx<'js>, v: Value<'js>) {
-    js_print(ctx, v);
+pub fn js_println(v: Value<'_>) {
+    js_print(v);
     println!();
 }
 pub fn add_global_fn(ctx: &mut Ctx) {
