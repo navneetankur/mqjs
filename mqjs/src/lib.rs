@@ -1,10 +1,8 @@
 mod thread;
 static RUST_DATA :RwLock<Option<RustData>> = RwLock::new(None);
 thread_local! {
-    pub static RUNTIME: AsyncRuntime = {
-        futures_lite::future::block_on(
-            create_runtime()
-        )
+    static RUNTIME: AsyncRuntime = {
+        create_runtime()
     }
 }
 
@@ -36,7 +34,7 @@ fn get_source(file_name: &str) -> Vec<u8> {
     return bytes;
 }
 
-async fn create_runtime() -> rquickjs::AsyncRuntime {
+fn create_runtime() -> rquickjs::AsyncRuntime {
     let rt = AsyncRuntime::new().unwrap();
     let resolver = 
         SimpleResolver::default().with_paths(
@@ -52,7 +50,9 @@ async fn create_runtime() -> rquickjs::AsyncRuntime {
         NativeLoader::default(),
         ScriptLoader::default(),
     );
-    rt.set_loader(resolver, loader).await;
+    futures_lite::future::block_on(
+        rt.set_loader(resolver, loader)
+    );
     return rt;
 }
 
