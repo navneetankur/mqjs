@@ -3,7 +3,7 @@ pub mod iterator;
 pub mod bufread;
 pub mod rustdata;
 
-use rquickjs::{atom::PredefinedAtom, Ctx, Function, Object, Value};
+use rquickjs::{atom::PredefinedAtom, Ctx, Function, IntoJs, Object, Value};
 #[allow(clippy::only_used_in_recursion)]
 #[must_use]
 pub fn value_to_string<'js>(ctx: &Ctx<'js>, js_value: Value<'js>) -> String {
@@ -64,9 +64,14 @@ fn is_toString(k: &Value<'_>) -> bool {
 }
 #[allow(non_snake_case)]
 fn get_toString(obj: Object<'_>) -> Value<'_> {
-    let toString: rquickjs::Function = obj.get(PredefinedAtom::ToString).unwrap();
-    let str_val = toString.call::<_, Value>((rquickjs::function::This(obj),));
-    return str_val.unwrap();
+    if let Ok(toString) = obj.get::<_,rquickjs::Function>(PredefinedAtom::ToString) {
+        let str_val = toString.call::<_, Value>((rquickjs::function::This(obj),));
+        return str_val.unwrap();
+    }
+    else {
+        let str_val = format!("{obj:?}");
+        return str_val.into_js(obj.ctx()).unwrap();
+    }
 }
 #[allow(clippy::needless_pass_by_value)]
 pub fn js_print<'js>(ctx: Ctx<'js>, v: Value<'js>) {
