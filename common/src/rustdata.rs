@@ -1,4 +1,4 @@
-use rquickjs::{class::{ClassId, JsClass, Trace, Writable}, Class, Ctx, FromJs, IntoJs, Value};
+use rquickjs::{class::{ClassId, JsClass, Trace, Writable}, Class, Ctx, IntoJs, Value};
 
 pub const RUST_DATA: &str = "___rust_data___";
 

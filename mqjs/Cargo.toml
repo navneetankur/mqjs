@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 rquickjs.workspace = true
-tokio.workspace = true
+futures-lite.workspace = true
 api.workspace = true
 common.workspace = true
 

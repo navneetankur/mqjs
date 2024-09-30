@@ -2,6 +2,7 @@
 pub mod iterator;
 pub mod bufread;
 pub mod rustdata;
+pub mod thread;
 
 use rquickjs::{atom::PredefinedAtom, Ctx, Function, IntoJs, Object, Value};
 #[must_use]

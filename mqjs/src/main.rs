@@ -1,4 +1,5 @@
-#[tokio::main(flavor = "current_thread")]
-async fn main() {
-    mqjs::realmain(std::env::args()).await;
+fn main() {
+    futures_lite::future::block_on(
+        mqjs::realmain(std::env::args())
+    );
 }

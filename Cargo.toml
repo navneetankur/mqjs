@@ -28,6 +28,7 @@ module_name_repetitions = "allow"
 [workspace.dependencies]
 rquickjs = {version = "0.6", features = ["futures", "loader", "dyn-load", "macro"]}
 # rquickjs = {path = "rquickjs", features = ["futures", "loader", "dyn-load"]}
-tokio = {version = "1.40", default-features = false, features = ["rt", "fs", "macros"]}
 api = {path = "api"}
+futures-lite = {version = "2.3", default-features = false, features = ["std"]}
+async-channel = {version = "2.3", default-features = false, features = ["std"]}
 common = {path = "common"}
