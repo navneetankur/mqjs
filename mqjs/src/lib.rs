@@ -19,7 +19,7 @@ fn get_source(file_name: &str) -> Vec<u8> {
     // let use_strict = b"\"use strict;\"\n";
     let use_strict = b"";
     let mut file = File::open(file_name).unwrap();
-    let size = file.metadata().map(|m| m.len() as usize).ok();
+    let size = file.metadata().map(|m| m.len().try_into().unwrap() ).ok();
     let mut bytes = Vec::new();
     bytes.reserve_exact(use_strict.len() + size.unwrap_or(0));
     bytes.extend_from_slice(use_strict);
