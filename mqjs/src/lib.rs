@@ -1,5 +1,5 @@
+mod thread;
 use std::{env::Args, fs::File, io::Read, path::{Path, PathBuf}};
-
 use rquickjs::{async_with, loader::{NativeLoader, ScriptLoader}, AsyncContext, AsyncRuntime, Ctx, Function, Module, Value};
 const MODULE_PATH_JS: &str = "/home/navn/bin/lib/mqjs/modules/js";
 const MODULE_PATH_SO: &str = "/home/navn/bin/lib/mqjs/modules/so";
@@ -55,7 +55,6 @@ async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args:
     }).await;
     rt.idle().await;
 }
-
 async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
     use common::rustdata::{RUST_DATA, RustData};
     let module_decl = Module::declare(ctx.clone(), file_name, source);
@@ -63,19 +62,25 @@ async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
     let module_bytes = get_ok_check_err(ctx, 
         module_decl.write(false)
     );
-    ctx.globals().prop(
+    let globals = ctx.globals();
+    globals.set("thread", thread::thread_fn(ctx)).unwrap();
+    globals.prop(
         RUST_DATA, 
         RustData::new(module_bytes)
     ).unwrap();
-    let (module_evaluated, module_evaluation) = get_ok_check_err(ctx, 
-        module_decl.eval()
-    );
-    let evaluation_result = module_evaluation.into_future::<Value>().await;
-    get_ok_check_err(ctx, evaluation_result);
+    let module_evaluated = evaluate_module(ctx, module_decl).await;
     let Ok(main) = module_evaluated.get::<_,Function>("main") else { return ; };
     get_ok_check_err(ctx, 
         main.call::<_, Value>(())
     );
+}
+async fn evaluate_module<'js>(ctx: &Ctx<'js>, module: Module<'js>) -> Module<'js, rquickjs::module::Evaluated> {
+    let (module_evaluated, module_evaluation) = get_ok_check_err(ctx, 
+        module.eval()
+    );
+    let evaluation_result = module_evaluation.into_future::<Value>().await;
+    get_ok_check_err(ctx, evaluation_result);
+    return module_evaluated;
 }
 fn get_ok_check_err<V>(ctx: &Ctx, result: rquickjs::Result<V>) -> V {
     match result {

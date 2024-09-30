@@ -1,8 +1,8 @@
-use rquickjs::{class::{ClassId, JsClass, Trace, Writable}, Class, Ctx, IntoJs, Value};
+use rquickjs::{class::{ClassId, JsClass, Trace, Writable}, Class, Ctx, FromJs, IntoJs, Value};
 
 pub const RUST_DATA: &str = "___rust_data___";
 
-#[derive(Trace)]
+#[derive(Trace, Clone)]
 pub struct RustData {
     pub module_byte: Vec<u8>,
 }
