@@ -10,7 +10,7 @@ pub async fn realmain(args: Args) {
     let mut args = args.peekable();
     args.next(); //get rid of this program name.
     let script_name = args.peek().expect("No script file provided.").clone();
-    let rt = AsyncRuntime::new().unwrap();
+    let rt = create_runtime().await;
     let source = get_source(&script_name);
     process_and_run(rt, &source, &script_name, args).await;
 }
@@ -27,7 +27,8 @@ fn get_source(file_name: &str) -> Vec<u8> {
     return bytes;
 }
 
-async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {
+async fn create_runtime() -> rquickjs::AsyncRuntime {
+    let rt = AsyncRuntime::new().unwrap();
     let resolver = 
         SimpleResolver::default().with_paths(
             [
@@ -43,6 +44,10 @@ async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args:
         ScriptLoader::default(),
     );
     rt.set_loader(resolver, loader).await;
+    return rt;
+}
+
+async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {
     let context = AsyncContext::full(&rt).await.unwrap();
     async_with!(context => |ctx| {
         api::add_api_obj(&ctx, args);
