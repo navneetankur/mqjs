@@ -5,13 +5,13 @@ use std::thread::JoinHandle;
 use rquickjs::{class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, Class, Ctx, Function, IntoJs, Object, Value};
 
 pub struct JsJoinHandle {
-    pub v: Option<JoinHandle<String>>,
+    pub v: Option<JoinHandle<Option<String>>>,
     pub channel: JsChannel,
 }
 
 impl JsJoinHandle {
     #[must_use]
-    pub fn new(v: Option<JoinHandle<String>>, receiver: Option<async_channel::Receiver<String>>, sender: Option<async_channel::Sender<String>>) -> Self {
+    pub fn new(v: Option<JoinHandle<Option<String>>>, receiver: Option<async_channel::Receiver<String>>, sender: Option<async_channel::Sender<String>>) -> Self {
         Self { v, channel: JsChannel::new(receiver, sender) }
     }
 }
@@ -57,7 +57,9 @@ static NONE_MESSAGE: &str = "This handle is already given up.";
 #[allow(clippy::needless_pass_by_value)]
 fn join<'js>(ctx: Ctx<'js>, mut this: This<'js>) -> Value<'js> {
     let Some(handle) = this.v.take() else { panic!("{}", NONE_MESSAGE) };
-    let rusty =  handle.join().unwrap();
+    let Some(rusty) =  handle.join().unwrap() else {
+        return Value::new_undefined(ctx.clone());
+    };
     let value = ctx.json_parse(rusty).unwrap();
     return value;
 }
