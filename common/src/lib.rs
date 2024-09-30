@@ -1,6 +1,7 @@
 #![feature(const_type_name)]
 pub mod iterator;
 pub mod bufread;
+pub mod rustdata;
 
 use rquickjs::{atom::PredefinedAtom, Ctx, Function, Object, Value};
 #[allow(clippy::only_used_in_recursion)]
