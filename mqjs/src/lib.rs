@@ -57,11 +57,10 @@ fn create_runtime() -> rquickjs::AsyncRuntime {
 }
 
 fn process_and_run(source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {
-    RUNTIME.with(|rt|{
-        futures_lite::future::block_on(
-            process_and_run_async(rt, source, file_name, args)
-        );
-    });
+    let rt = create_runtime();
+    futures_lite::future::block_on(
+        process_and_run_async(&rt, source, file_name, args)
+    );
     // rt.idle().await;
 }
 async fn process_and_run_async(rt: &AsyncRuntime, source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {

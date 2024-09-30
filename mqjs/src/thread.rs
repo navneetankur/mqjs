@@ -18,7 +18,8 @@ pub fn start<'js>(fun: Function<'js>, params: Rest<Value<'js>>) -> common::threa
     let (fun_name, params_json) = setup_task(fun, params);
 
     let join = std::thread::spawn(||{
-        in_thread(params_json, fun_name)
+        let rt = super::create_runtime();
+        in_thread(&rt, params_json, fun_name)
     });
     return JsJoinHandle::new(Some(join), None, None);
     // in_thread(params_json, fun_name, rust_data).await;
@@ -55,12 +56,10 @@ async fn in_thread_async(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name:
     }).await;
     return rv;
 }
-fn in_thread(params_json: Vec<String>, fun_name: String) -> Option<String>{
-    super::RUNTIME.with(|rt2| {
-        futures_lite::future::block_on(
-            in_thread_async(rt2, params_json, fun_name)
-        )
-    })
+fn in_thread(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name: String) -> Option<String>{
+    futures_lite::future::block_on(
+        in_thread_async(rt2, params_json, fun_name)
+    )
 }
 
 async fn run_with_func<'js>(fun_name: &str, args: Args<'js>, ctx2: &Ctx<'js>) -> Option<String> {
