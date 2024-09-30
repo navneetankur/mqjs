@@ -1,5 +1,12 @@
 mod thread;
 static RUST_DATA :RwLock<Option<RustData>> = RwLock::new(None);
+thread_local! {
+    pub static RUNTIME: AsyncRuntime = {
+        futures_lite::future::block_on(
+            create_runtime()
+        )
+    }
+}
 
 use std::{env::Args, fs::File, io::Read, path::{Path, PathBuf}, sync::RwLock};
 use common::rustdata::RustData;
@@ -9,13 +16,12 @@ const MODULE_PATH_SO: &str = "/home/navn/bin/lib/mqjs/modules/so";
 #[cfg(debug_assertions)]
 const WORKSPACE_TEMP: &str = "/home/navn/workspace/rust/mqjs/target/debug";
 
-pub async fn realmain(args: Args) {
+pub fn realmain(args: Args) {
     let mut args = args.peekable();
     args.next(); //get rid of this program name.
     let script_name = args.peek().expect("No script file provided.").clone();
-    let rt = create_runtime().await;
     let source = get_source(&script_name);
-    process_and_run(rt, &source, &script_name, args).await;
+    process_and_run(&source, &script_name, args);
 }
 
 fn get_source(file_name: &str) -> Vec<u8> {
@@ -50,13 +56,20 @@ async fn create_runtime() -> rquickjs::AsyncRuntime {
     return rt;
 }
 
-async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {
-    let context = AsyncContext::full(&rt).await.unwrap();
+fn process_and_run(source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {
+    RUNTIME.with(|rt|{
+        futures_lite::future::block_on(
+            process_and_run_async(rt, source, file_name, args)
+        );
+    });
+    // rt.idle().await;
+}
+async fn process_and_run_async(rt: &AsyncRuntime, source: &[u8], file_name: &str, args: impl IntoIterator<Item = String>) {
+    let context = AsyncContext::full(rt).await.unwrap();
     async_with!(context => |ctx| {
         api::add_api_obj(&ctx, args);
         run_js_source(&ctx, source, file_name).await;
     }).await;
-    rt.idle().await;
 }
 async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
     let module_decl = Module::declare(ctx.clone(), file_name, source);

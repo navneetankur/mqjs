@@ -1,5 +1,5 @@
 use common::thread::JsJoinHandle;
-use rquickjs::{async_with, function::Args, prelude::{Async, Rest}, AsyncContext, Ctx, Function, Module, Object, Value};
+use rquickjs::{async_with, function::Args, prelude::Rest, AsyncContext, AsyncRuntime, Ctx, Function, Module, Object, Value};
 static CANNOT_SERIALIZE: &str = "cannot serialize a value, being passed to another thread.";
 
 pub fn add_thread_objects(global: &mut Object) {
@@ -18,9 +18,7 @@ pub fn start<'js>(fun: Function<'js>, params: Rest<Value<'js>>) -> common::threa
     let (fun_name, params_json) = setup_task(fun, params);
 
     let join = std::thread::spawn(||{
-        futures_lite::future::block_on(
         in_thread(params_json, fun_name)
-        )
     });
     return JsJoinHandle::new(Some(join), None, None);
     // in_thread(params_json, fun_name, rust_data).await;
@@ -44,9 +42,8 @@ fn setup_task<'js>(fun: Function<'js>, params: Rest<Value<'js>>) -> (String, Vec
     (fun_name, params_json)
 }
 
-async fn in_thread(params_json: Vec<String>, fun_name: String) -> Option<String>{
-    let rt2 = super::create_runtime().await;
-    let context2 = AsyncContext::full(&rt2).await.unwrap();
+async fn in_thread_async(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name: String) -> Option<String>{
+    let context2 = AsyncContext::full(rt2).await.unwrap();
     let rv = async_with!(context2 => |ctx2| {
         api::add_api_obj(&ctx2, []);
         let mut args = Args::new(ctx2.clone(), params_json.len());
@@ -57,8 +54,13 @@ async fn in_thread(params_json: Vec<String>, fun_name: String) -> Option<String>
         run_with_func(&fun_name, args, &ctx2).await
     }).await;
     return rv;
-    // rt2.idle().await;
-
+}
+fn in_thread(params_json: Vec<String>, fun_name: String) -> Option<String>{
+    super::RUNTIME.with(|rt2| {
+        futures_lite::future::block_on(
+            in_thread_async(rt2, params_json, fun_name)
+        )
+    })
 }
 
 async fn run_with_func<'js>(fun_name: &str, args: Args<'js>, ctx2: &Ctx<'js>) -> Option<String> {
