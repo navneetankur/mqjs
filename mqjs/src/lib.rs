@@ -57,11 +57,18 @@ async fn process_and_run(rt: AsyncRuntime, source: &[u8], file_name: &str, args:
 }
 
 async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
-    let mod_evaluation = Module::evaluate(ctx.clone(),file_name, source);
-    match mod_evaluation {
-        Ok(ok) => {
-            let Err(e) = ok.into_future::<Value>().await else {return};
-            check_err(e, ctx);
+    let module_decl = Module::declare(ctx.clone(), file_name, source);
+    // let mod_evaluation = Module::evaluate(ctx.clone(),file_name, source);
+    match module_decl {
+        Ok(module) => {
+            let module_evaluation = module.eval();
+            match module_evaluation {
+                Ok((_,ok)) => {
+                    let Err(e) = ok.into_future::<Value>().await else {return};
+                    check_err(e, ctx);
+                },
+                Err(e) => check_err(e, ctx),
+            }
         },
         Err(e) => check_err(e, ctx),
     };
