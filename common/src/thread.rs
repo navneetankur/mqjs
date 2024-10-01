@@ -79,7 +79,8 @@ fn unpark(this: This<'_>) {
     handle.thread().unpark();
 }
 #[rquickjs::function]
-fn channel<'js>(mut this: This<'js>) -> Option<JsChannel> {
+fn channel<'js>(mut this: This<'js>) -> JsChannel {
     this.channel.take()
+        .expect("Channel not present, already gone or never setup.")
 }
 

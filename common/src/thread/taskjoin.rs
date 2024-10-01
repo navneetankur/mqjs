@@ -42,8 +42,9 @@ fn then<'js>(ctx: Ctx<'js>, mut this: This<'js>, resolve: Function<'js>, reject:
     ctx.spawn(future);
 }
 #[rquickjs::function]
-fn channel<'js>(mut this: This<'js>) -> Option<JsChannel> {
+fn channel<'js>(mut this: This<'js>) -> JsChannel {
     this.channel.take()
+        .expect("Channel not present, already gone or never setup.")
 }
 
 impl<'js> Trace<'js> for TaskJoin {
