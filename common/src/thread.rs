@@ -1,3 +1,4 @@
+pub mod taskjoin;
 mod channel;
 pub use channel::JsChannel;
 use std::thread::JoinHandle;

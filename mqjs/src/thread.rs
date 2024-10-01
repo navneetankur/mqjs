@@ -1,3 +1,4 @@
+mod pool;
 use common::thread::JsJoinHandle;
 use rquickjs::{async_with, function::Args, prelude::Rest, AsyncContext, AsyncRuntime, Ctx, Function, Module, Object, Value};
 static CANNOT_SERIALIZE: &str = "cannot serialize a value, being passed to another thread.";

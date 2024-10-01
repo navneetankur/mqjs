@@ -7,6 +7,8 @@ edition = "2021"
 rquickjs.workspace = true
 futures-lite.workspace = true
 async-channel.workspace = true
+futures-channel.workspace = true
+futures-executor.workspace = true
 
 [lints]
 workspace = true
