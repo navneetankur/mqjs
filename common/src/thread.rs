@@ -7,15 +7,17 @@ use rquickjs::{class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, Class
 
 pub struct JsJoinHandle {
     pub v: Option<JoinHandle<Option<String>>>,
-    pub channel: JsChannel,
+    pub channel: Option<JsChannel>,
 }
 
 impl JsJoinHandle {
     #[must_use]
-    pub fn new(v: Option<JoinHandle<Option<String>>>, receiver: Option<async_channel::Receiver<String>>, sender: Option<async_channel::Sender<String>>) -> Self {
-        Self { v, channel: JsChannel::new(receiver, sender) }
+    pub fn new(v: Option<JoinHandle<Option<String>>>, channel: Option<JsChannel>) -> Self {
+        Self { v, channel }
     }
 }
+
+
 impl<'js> Trace<'js> for JsJoinHandle {
     fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
 }

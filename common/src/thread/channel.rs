@@ -1,17 +1,19 @@
+use futures_channel::mpsc;
+use futures_lite::StreamExt;
 use rquickjs::{class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, prelude::Async, Class, Ctx, Function, IntoJs, Object, Value};
 
 use crate::iterator::NextReturn;
 
 pub struct JsChannel {
-    pub receiver: Option<async_channel::Receiver<String>>,
-    pub sender: Option<async_channel::Sender<String>>,
+    pub receiver: mpsc::UnboundedReceiver<String>,
+    pub sender: mpsc::UnboundedSender<String>,
 }
 impl<'js> Trace<'js> for JsChannel {
     fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
 }
 impl JsChannel {
     #[must_use]
-    pub fn new(receiver: Option<async_channel::Receiver<String>>, sender: Option<async_channel::Sender<String>>) -> Self {
+    pub fn new(receiver: mpsc::UnboundedReceiver<String>, sender: mpsc::UnboundedSender<String>) -> Self {
         Self { receiver, sender }
     }
 }
@@ -34,7 +36,7 @@ impl<'js> JsClass<'js> for JsChannel {
     fn prototype(ctx: &Ctx<'js>) -> rquickjs::Result<Option<rquickjs::Object<'js>>> {
         let proto = Object::new(ctx.clone()).unwrap();
 
-        let func = Function::new(ctx.clone(), Async(send)).unwrap();
+        let func = Function::new(ctx.clone(), send).unwrap();
         proto.set("send", func).unwrap();
 
         let func = Function::new(ctx.clone(), async_iterator).unwrap();
@@ -50,24 +52,23 @@ impl<'js> JsClass<'js> for JsChannel {
         Ok(None)
     }
 }
-static NONE_CHANNEL: &str = "Channel has not been setup.";
 static NO_SERIAL: &str = "Message cannot be serialized. So it can't be sent between threads.";
-static NO_DESERIAL: &str = "Message cannot be serialized. So it can't be sent between threads.";
+static NO_DESERIAL: &str = "Message cannot be deserialized. So it can't be sent between threads.";
 type This<'js> = rquickjs::function::This<OwnedBorrowMut<'js, JsChannel>>;
-async fn send<'js>(this: This<'js>, ctx: Ctx<'js>, value: Value<'js> ) {
-    let Some(sender) = &this.sender else { panic!("{}", NONE_CHANNEL) };
+fn send<'js>(this: This<'js>, ctx: Ctx<'js>, value: Value<'js> ) -> bool {
     let Ok(message) = ctx.json_stringify(value) else {panic!("{}", NO_SERIAL)};
     let Some(message) = message else {panic!("{}", NO_SERIAL)};
-    sender.send(message.to_string().unwrap()).await.unwrap();
+    return this.sender.unbounded_send(message.to_string().unwrap()).is_ok();
 }
 fn async_iterator(this: This) -> Class<JsChannel> {
     this.0.into_inner()
 }
-async fn next<'js>(ctx: Ctx<'js>, this: This<'js>) -> NextReturn<Value<'js>> {
-    let Some(receiver) = &this.receiver else { panic!("{}", NONE_CHANNEL) };
-    if let Ok(message) = receiver.recv().await {
-        let Ok(value) = ctx.json_parse(message) 
-            else {panic!("{}", NO_DESERIAL)};
+async fn next<'js>(ctx: Ctx<'js>, mut this: This<'js>) -> NextReturn<Value<'js>> {
+    if let Some(value) = this.receiver.next().await {
+        let value = ctx.json_parse(value).expect(NO_DESERIAL);
         return NextReturn::some(value);
-    } else { return NextReturn::none(); }
+    }
+    else {
+        return NextReturn::none();
+    }
 }

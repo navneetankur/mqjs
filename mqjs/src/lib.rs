@@ -69,6 +69,7 @@ async fn process_and_run_async(rt: &AsyncRuntime, source: &[u8], file_name: &str
         api::add_api_obj(&ctx, args);
         run_js_source(&ctx, source, file_name).await;
     }).await;
+    rt.idle().await;
 }
 async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
     let module_decl = Module::declare(ctx.clone(), file_name, source);

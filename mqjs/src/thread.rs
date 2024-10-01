@@ -1,4 +1,6 @@
 mod pool;
+use core::time::Duration;
+
 use common::thread::JsJoinHandle;
 use rquickjs::{async_with, function::Args, prelude::Rest, AsyncContext, AsyncRuntime, Ctx, Function, Module, Object, Value};
 static CANNOT_SERIALIZE: &str = "cannot serialize a value, being passed to another thread.";
@@ -11,6 +13,13 @@ pub fn add_thread_objects(global: &mut Object) {
     let thread = Object::new(ctx.clone()).unwrap();
     thread.set("start", Function::new(ctx.clone(), start)).unwrap();
 
+    thread.set("pool", 
+        Function::new(ctx.clone(), pool::ThreadPool::new)).unwrap();
+    let sleep = |secs: f32| {
+        std::thread::sleep(Duration::from_secs_f32(secs));
+    };
+    thread.set("sleep", Function::new(ctx.clone(), sleep)).unwrap();
+
     api.set("thread", thread).unwrap();
 }
 
@@ -22,7 +31,7 @@ pub fn start<'js>(fun: Function<'js>, params: Rest<Value<'js>>) -> common::threa
         let rt = super::create_runtime();
         in_thread(&rt, params_json, fun_name)
     });
-    return JsJoinHandle::new(Some(join), None, None);
+    return JsJoinHandle::new(Some(join), None);
     // in_thread(params_json, fun_name, rust_data).await;
 }
 
@@ -55,6 +64,7 @@ async fn in_thread_async(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name:
         }
         run_with_func(&fun_name, args, &ctx2).await
     }).await;
+    rt2.idle().await;
     return rv;
 }
 fn in_thread(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name: String) -> Option<String>{

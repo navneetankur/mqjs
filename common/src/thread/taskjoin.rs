@@ -1,6 +1,6 @@
 
 use futures_channel::oneshot;
-use rquickjs::{atom::PredefinedAtom, class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, Class, Ctx, Function, IntoJs, Object, Value};
+use rquickjs::{atom::PredefinedAtom, class::{ClassId, JsClass, OwnedBorrowMut, Trace, Writable}, prelude::Rest, Class, Ctx, Function, IntoJs, Object, Value};
 
 use super::JsChannel;
 
@@ -8,18 +8,34 @@ pub struct TaskJoin {
     receiver: Option<oneshot::Receiver<Option<String>>>,
     channel: Option<JsChannel>,
 }
+
+impl TaskJoin {
+    #[must_use]
+    pub fn new(receiver: Option<oneshot::Receiver<Option<String>>>, channel: Option<JsChannel>) -> Self {
+        Self { receiver, channel }
+    }
+}
 static RECIEVER_GONE: &str = "Reciever is missing, did you await twice?";
 type This<'js> = rquickjs::function::This<OwnedBorrowMut<'js, TaskJoin>>;
 #[allow(clippy::needless_pass_by_value)]
-fn then<'js>(ctx: Ctx<'js>, mut this: This<'js>, resolve: Function<'js>, reject: Function<'js>) {
+fn then<'js>(ctx: Ctx<'js>, mut this: This<'js>, resolve: Function<'js>, reject: Rest<Function<'js>>) {
     let receiver = this.receiver.take().expect(RECIEVER_GONE);
+    let ctxf = ctx.clone();
     let future = async move {
         match receiver.await {
             Ok(result) => {
-                resolve.call::<_,Value>((result,)).unwrap();
+                if let Some(result) = result {
+                    let result = ctxf.json_parse(result).expect("can't be deserialized");
+                    resolve.call::<_,Value>((result,)).unwrap();
+                }
+                else {
+                    resolve.call::<_,Value>(()).unwrap();
+                }
             }
             Err(_) => {
-                reject.call::<_,Value>(("cancelled",)).unwrap();
+                if let Some(reject) = reject.into_inner().drain(..).next() {
+                    reject.call::<_,Value>(("cancelled",)).unwrap();
+                }
             }
         }
     };

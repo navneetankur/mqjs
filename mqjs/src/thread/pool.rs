@@ -1,3 +1,4 @@
+use common::thread::taskjoin::TaskJoin;
 use rquickjs::{class::Trace, prelude::Rest, Function, Value};
 
 #[rquickjs::class]
@@ -14,7 +15,7 @@ impl ThreadPool {
         let pool = threadpool::Builder::new().num_threads(size).build();
         return Self { pool, pool_count: size,};
     }
-    pub fn spawn<'js>(&mut self, fun: Function<'js>, params: Rest<Value<'js>>) {
+    pub fn spawn<'js>(&mut self, fun: Function<'js>, params: Rest<Value<'js>>) -> TaskJoin {
         let (fun_name, params_json) = super::setup_task(fun, params);
         let (sender, receiver) = futures_channel::oneshot::channel::<Option<String>>();
         self.pool.execute(|| {
@@ -23,6 +24,7 @@ impl ThreadPool {
                 sender.send(result).unwrap();
             });
         });
+        return TaskJoin::new(Some(receiver), None);
     }
 }
 
