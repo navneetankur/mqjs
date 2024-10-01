@@ -50,8 +50,10 @@ impl<'js> JsClass<'js> for JsChannel {
         proto.set("send", func).unwrap();
 
         let func = Function::new(ctx.clone(), async_iterator).unwrap();
-        proto.set("Symbol.asyncIterator", func.clone()).unwrap();
-        proto.set(226, func).unwrap();
+
+        #[allow(non_snake_case)]
+        let Symbol_asyncIterator = rquickjs::Symbol::async_iterator(ctx.clone());
+        proto.set(Symbol_asyncIterator, func).unwrap();
 
         let func = Function::new(ctx.clone(), Async(next)).unwrap();
         proto.set(PredefinedAtom::Next, func).unwrap();
