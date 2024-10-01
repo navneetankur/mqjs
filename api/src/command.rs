@@ -80,7 +80,7 @@ impl<'js> IntoJs<'js> for JsCommand {
     }
 }
 impl JsCommand {
-    fn new(program: String) -> Self {
+    pub fn new(program: String) -> Self {
         Self{v:Command::new(program)}
     }
     fn env(&mut self, key: String, val: String) {

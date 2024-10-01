@@ -12,6 +12,7 @@ const STDIN: &str = "stdin";
 const OPENR: &str = "openr";
 const OPENW: &str = "openw";
 const STDOUT: &str = "stdout";
+const COMMAND: &str = "command";
 
 pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let globals = ctx.globals();
@@ -26,13 +27,16 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     api.set(OPENW, file::filewrite::js_openw).unwrap();
     let stdout = ||out::Out::default();
     api.set(STDOUT, Function::new(ctx.clone(), stdout)).unwrap();
+    api.set(COMMAND, 
+        Function::new(ctx.clone(), JsCommand::new).unwrap()
+        ).unwrap();
     let stdin = 
         ||JsBufReader::new(std::io::stdin().lock());
     api.set(STDIN, Function::new(ctx.clone(), stdin)).unwrap();
     globals.set(PRINTLN, println).unwrap();
     globals.set(PRINT, print).unwrap();
     globals.set("api", api).unwrap();
-    Class::<JsCommand>::define(&globals).unwrap();
+    // Class::<JsCommand>::define(&globals).unwrap();
 }
 fn get_args_array(ctx: Ctx<'_>,  args: impl IntoIterator<Item = String>) -> Array<'_> {
     let jargs = Array::new(ctx).unwrap();
