@@ -41,8 +41,9 @@ fn then<'js>(ctx: Ctx<'js>, mut this: This<'js>, resolve: Function<'js>, reject:
     };
     ctx.spawn(future);
 }
-fn channel(mut this: This<'_>) -> Option<super::channel::JsChannel> {
-    return this.channel.take()
+#[rquickjs::function]
+fn channel<'js>(mut this: This<'js>) -> Option<JsChannel> {
+    this.channel.take()
 }
 
 impl<'js> Trace<'js> for TaskJoin {
@@ -63,9 +64,7 @@ impl<'js> JsClass<'js> for TaskJoin {
         let func = Function::new(ctx.clone(), then).unwrap();
         proto.set(PredefinedAtom::Then, func).unwrap();
 
-        proto.set("channel", 
-            Function::new(ctx.clone(), channel).unwrap()
-        ).unwrap();
+        proto.set("channel", js_channel).unwrap();
         return Ok(Some(proto));
     }
 

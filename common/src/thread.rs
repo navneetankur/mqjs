@@ -48,6 +48,8 @@ impl<'js> JsClass<'js> for JsJoinHandle {
         let func = Function::new(ctx.clone(), unpark).unwrap();
         proto.set("unpark", func).unwrap();
 
+        proto.set("channel", js_channel).unwrap();
+
         return Ok(Some(proto));
     }
 
@@ -75,5 +77,9 @@ fn is_finished(this: This<'_>) -> bool {
 fn unpark(this: This<'_>) {
     let Some(handle) = &this.v else { panic!("{}", NONE_MESSAGE) };
     handle.thread().unpark();
+}
+#[rquickjs::function]
+fn channel<'js>(mut this: This<'js>) -> Option<JsChannel> {
+    this.channel.take()
 }
 

@@ -1,7 +1,7 @@
 mod pool;
 use core::time::Duration;
 
-use common::thread::JsJoinHandle;
+use common::thread::{JsChannel, JsJoinHandle};
 use rquickjs::{async_with, function::Args, prelude::Rest, AsyncContext, AsyncRuntime, Ctx, Function, Module, Object, Value};
 static CANNOT_SERIALIZE: &str = "cannot serialize a value, being passed to another thread.";
 
@@ -12,6 +12,8 @@ pub fn add_thread_objects(global: &mut Object) {
     );
     let thread = Object::new(ctx.clone()).unwrap();
     thread.set("start", Function::new(ctx.clone(), start)).unwrap();
+
+    thread.set("start_with_channel", js_start_with_channel).unwrap();
 
     thread.set("pool", 
         Function::new(ctx.clone(), pool::ThreadPool::new)).unwrap();
@@ -29,9 +31,22 @@ pub fn start<'js>(fun: Function<'js>, params: Rest<Value<'js>>) -> common::threa
 
     let join = std::thread::spawn(||{
         let rt = super::create_runtime();
-        in_thread(&rt, params_json, fun_name)
+        in_thread(&rt, params_json, fun_name, None)
     });
     return JsJoinHandle::new(Some(join), None);
+    // in_thread(params_json, fun_name, rust_data).await;
+}
+#[rquickjs::function]
+#[allow(clippy::needless_pass_by_value)]
+pub fn start_with_channel<'js>(fun: Function<'js>, params: Rest<Value<'js>>) -> common::thread::JsJoinHandle {
+    let (fun_name, params_json) = setup_task(fun, params);
+
+    let [channel0, channel1] = JsChannel::pair();
+    let join = std::thread::spawn(move ||{
+        let rt = super::create_runtime();
+        in_thread(&rt, params_json, fun_name, Some(channel0))
+    });
+    return JsJoinHandle::new(Some(join), Some(channel1));
     // in_thread(params_json, fun_name, rust_data).await;
 }
 
@@ -53,11 +68,14 @@ fn setup_task<'js>(fun: Function<'js>, params: Rest<Value<'js>>) -> (String, Vec
     (fun_name, params_json)
 }
 
-async fn in_thread_async(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name: String) -> Option<String>{
+async fn in_thread_async(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name: String, channel: Option<JsChannel>) -> Option<String>{
     let context2 = AsyncContext::full(rt2).await.unwrap();
     let rv = async_with!(context2 => |ctx2| {
         api::add_api_obj(&ctx2, []);
         let mut args = Args::new(ctx2.clone(), params_json.len());
+        if let Some(channel) = channel {
+            args.push_arg(channel).unwrap();
+        }
         for param_json in params_json {
             let arg = ctx2.json_parse(param_json).unwrap();
             args.push_arg(arg).unwrap();
@@ -67,9 +85,9 @@ async fn in_thread_async(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name:
     rt2.idle().await;
     return rv;
 }
-fn in_thread(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name: String) -> Option<String>{
+fn in_thread(rt2: &AsyncRuntime, params_json: Vec<String>, fun_name: String, channel: Option<JsChannel>) -> Option<String>{
     futures_lite::future::block_on(
-        in_thread_async(rt2, params_json, fun_name)
+        in_thread_async(rt2, params_json, fun_name, channel)
     )
 }
 

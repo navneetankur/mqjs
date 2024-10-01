@@ -85,16 +85,25 @@ async fn run_js_source<'js>(ctx: &Ctx<'js>, source: &[u8], file_name: &str) {
     }
     let module_evaluated = evaluate_module(ctx, module_decl).await;
     let Ok(main) = module_evaluated.get::<_,Function>("main") else { return ; };
-    get_ok_check_err(ctx, 
+    let main_return = get_ok_check_err(ctx, 
         main.call::<_, Value>(())
     );
+    loop_until_promise_fulfilled(ctx, main_return).await;
+}
+async fn loop_until_promise_fulfilled<'js>(ctx: &Ctx<'js>, mut value: Value<'js>) {
+    while let Some(promise) = value.into_promise() {
+        value = get_ok_check_err(ctx,
+            promise.into_future().await
+        );
+    }
 }
 async fn evaluate_module<'js>(ctx: &Ctx<'js>, module: Module<'js>) -> Module<'js, rquickjs::module::Evaluated> {
     let (module_evaluated, module_evaluation) = get_ok_check_err(ctx, 
         module.eval()
     );
     let evaluation_result = module_evaluation.into_future::<Value>().await;
-    get_ok_check_err(ctx, evaluation_result);
+    let value = get_ok_check_err(ctx, evaluation_result);
+    loop_until_promise_fulfilled(ctx, value).await;
     return module_evaluated;
 }
 fn get_ok_check_err<V>(ctx: &Ctx, result: rquickjs::Result<V>) -> V {
