@@ -77,10 +77,5 @@ fn get_proto<'js>(ctx: &Ctx<'js>) -> Object<'js> {
         add_signal,
         iterator,
     );
-
-
-
-
-
     return proto;
 }
