@@ -67,6 +67,7 @@ async fn process_and_run_async(rt: &AsyncRuntime, source: &[u8], file_name: &str
     let context = AsyncContext::full(rt).await.unwrap();
     async_with!(context => |ctx| {
         api::add_api_obj(&ctx, args);
+        signal::add_signal_props(&ctx.globals());
         run_js_source(&ctx, source, file_name).await;
     }).await;
     rt.idle().await;

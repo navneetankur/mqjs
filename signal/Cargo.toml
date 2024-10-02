@@ -1,0 +1,12 @@
+[package]
+name = "signal"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+signal-hook.workspace = true
+rquickjs.workspace = true
+common.workspace = true
+
+[lints]
+workspace = true

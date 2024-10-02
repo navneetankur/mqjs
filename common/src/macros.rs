@@ -1,5 +1,7 @@
+/// class_chore!(class, get_proto)
+#[macro_export]
 macro_rules! class_chore {
-    ($classname: ident, $proto: ident) => {
+    ($classname: ident, $get_proto: ident) => {
 
 impl<'js> rquickjs::class::Trace<'js> for $classname {
     fn trace<'a>(&self, _: rquickjs::class::Tracer<'a, 'js>) {}
@@ -10,7 +12,7 @@ impl<'js> rquickjs::IntoJs<'js> for $classname
         rquickjs::Class::instance(ctx.clone(), self).into_js(ctx)
     }
 }
-impl<'js> JsClass<'js> for $classname {
+impl<'js> rquickjs::class::JsClass<'js> for $classname {
     const NAME: &'static str = stringify!($classname);
 
     type Mutable = rquickjs::class::Writable;
@@ -22,7 +24,7 @@ impl<'js> JsClass<'js> for $classname {
     }
 
     fn prototype(ctx: &rquickjs::Ctx<'js>) -> rquickjs::Result<Option<rquickjs::Object<'js>>> {
-        return Ok(Some($proto));
+        return Ok(Some($get_proto(ctx)));
     }
 
     fn constructor(_: &rquickjs::Ctx<'js>) -> rquickjs::Result<Option<rquickjs::function::Constructor<'js>>> {
@@ -30,5 +32,16 @@ impl<'js> JsClass<'js> for $classname {
     }
 }
 
+    };
+}
+/// object_fn!(object, func)
+#[macro_export]
+macro_rules! object_fn {
+    ($object:ident, $($funcs:ident),+ $(,)?) => {
+        let ctx = $object.ctx();
+        $(
+        let temp = rquickjs::Function::new(ctx.clone(), $funcs).unwrap();
+        $object.set(stringify!($funcs), temp).unwrap();
+        )+
     };
 }

@@ -5,6 +5,11 @@ use rquickjs::{atom::PredefinedAtom, class::{ClassId, JsClass, OwnedBorrowMut, T
 pub struct JsIterator <T: Iterator> {
     v: T,
 }
+impl<T: Iterator> From<T> for JsIterator<T>{
+    fn from(value: T) -> Self {
+        JsIterator { v: value }
+    }
+}
 
 impl<T: Iterator> JsIterator<T> {
     pub fn new(v: T) -> Self {

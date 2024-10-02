@@ -9,7 +9,7 @@ debug = "none"
 resolver = "2"
 members = [ "api", "common",
 	"mqjs"
-]
+, "signal"]
 exclude = ["rquickjs"]
 
 [workspace.lints.rust]
@@ -26,15 +26,19 @@ redundant_else = "allow"
 module_name_repetitions = "allow"
 similar_names = "allow"
 needless_lifetimes = "allow"
+doc_markdown = "allow"
+needless_pass_by_value = "allow"
 
 [workspace.dependencies]
-rquickjs = {version = "0.6", features = ["futures", "loader", "dyn-load", "macro"]}
 # rquickjs = {path = "rquickjs", features = ["futures", "loader", "dyn-load"]}
+common = {path = "common"}
 api = {path = "api"}
+signal = {path = "signal"}
+rquickjs = {version = "0.6", features = ["futures", "loader", "dyn-load", "macro"]}
 futures-lite = {version = "2.3", default-features = false, features = ["std"]}
 async-channel = {version = "2.3", default-features = false, features = ["std"]}
 async-executor = {version = "1.13", default-features = false}
 futures-executor = "0.2"
 futures-channel = "0.3"
 threadpool = "1.8"
-common = {path = "common"}
+signal-hook = "0.3"
