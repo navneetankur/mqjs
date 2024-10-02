@@ -74,7 +74,8 @@ fn get_proto<'js>(ctx: &Ctx<'js>) -> Object<'js> {
         Function::new(ctx.clone(), iterator).unwrap()
     ).unwrap();
     common::object_fn!(proto, 
-        add_signal
+        add_signal,
+        iterator,
     );
 
 
