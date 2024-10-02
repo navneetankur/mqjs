@@ -1,4 +1,5 @@
 #![feature(const_type_name)]
+pub mod path;
 pub mod macros;
 pub mod iterator;
 pub mod bufread;
