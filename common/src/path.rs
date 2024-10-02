@@ -7,10 +7,20 @@ class_chore!(JsPath, get_proto);
 pub struct JsPath {
     v: PathBuf,
 }
+
+impl JsPath {
+    #[must_use]
+    pub fn new(v: PathBuf) -> Self {
+        Self { v }
+    }
+}
 type ThisMut<'js> = rquickjs::function::This<OwnedBorrowMut<'js, JsPath>>;
 type This<'js> = rquickjs::function::This<OwnedBorrow<'js, JsPath>>;
 type ThisClass<'js> = rquickjs::class::Class<'js, JsPath>;
-
+#[must_use]#[rquickjs::function]
+pub fn new(value: String) -> JsPath {
+    JsPath::new(PathBuf::from(value))
+}
 fn clear(mut this: ThisMut) -> ThisClass {
     this.v.clear();
     return this.0.into_inner();

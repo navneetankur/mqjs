@@ -13,6 +13,7 @@ const OPENR: &str = "openr";
 const OPENW: &str = "openw";
 const STDOUT: &str = "stdout";
 const COMMAND: &str = "command";
+const PATH: &str = "path";
 
 pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     let globals = ctx.globals();
@@ -30,6 +31,7 @@ pub fn add_api_obj(ctx: &Ctx, args: impl IntoIterator<Item = String>) {
     api.set(COMMAND, 
         Function::new(ctx.clone(), JsCommand::new).unwrap()
         ).unwrap();
+    api.set(PATH, common::path::js_new).unwrap();
     let stdin = 
         ||JsBufReader::new(std::io::stdin().lock());
     api.set(STDIN, Function::new(ctx.clone(), stdin)).unwrap();
